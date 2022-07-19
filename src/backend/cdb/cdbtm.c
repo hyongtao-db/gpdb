@@ -870,7 +870,7 @@ prepareDtxTransaction(void)
 	 * Otherwise, broadcast PREPARE TRANSACTION to the segments.
 	 */
 	if (!TopXactExecutorDidWriteXLog() ||
-		(!markXidCommitted && list_length(MyTmGxactLocal->dtxSegments) < 2))
+		(!markXidCommitted && list_length(MyTmGxactLocal->writeSegments) < 2))
 	{
 		setCurrentDtxState(DTX_STATE_ONE_PHASE_COMMIT);
 		/*
@@ -1435,6 +1435,8 @@ resetTmGxact(void)
 	MyTmGxactLocal->writerGangLost = false;
 	MyTmGxactLocal->dtxSegmentsMap = NULL;
 	MyTmGxactLocal->dtxSegments = NIL;
+	MyTmGxactLocal->writeSegmentsMap = NULL;
+	MyTmGxactLocal->writeSegments = NIL;
 	MyTmGxactLocal->isOnePhaseCommit = false;
 	if (MyTmGxactLocal->waitGxids != NULL)
 	{
@@ -2410,6 +2412,43 @@ addToGxactDtxSegments(Gang *gang)
 			lappend_int(MyTmGxactLocal->dtxSegments, segindex);
 	}
 	MemoryContextSwitchTo(oldContext);
+}
+
+
+/* Record a segment is read only if it didn't write any xlog before */
+void
+addToGxactWriteSegments(int segindex)
+{
+    MemoryContext oldContext;
+
+    if (!isCurrentDtxActivated())
+        return;
+
+    if (segindex < 0)
+        return;
+
+    /* skip if all segdbs are in the list */
+    if (list_length(MyTmGxactLocal->writeSegments) >= getgpsegmentCount())
+        return;
+
+    oldContext = MemoryContextSwitchTo(TopTransactionContext);
+
+    /* skip if already recorded in writeSegments */
+    if (bms_is_member(segindex, MyTmGxactLocal->writeSegmentsMap))
+    {
+        MemoryContextSwitchTo(oldContext);
+        return;
+    }
+
+    MyTmGxactLocal->writeSegmentsMap =
+        bms_add_member(MyTmGxactLocal->writeSegmentsMap, segindex);
+
+    MyTmGxactLocal->writeSegments =
+        lappend_int(MyTmGxactLocal->writeSegments, segindex);
+
+    Assert(list_length(MyTmGxactLocal->writeSegments) <= getgpsegmentCount());
+
+    MemoryContextSwitchTo(oldContext);
 }
 
 bool

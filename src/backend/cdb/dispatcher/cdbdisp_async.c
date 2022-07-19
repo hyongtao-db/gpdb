@@ -1092,6 +1092,7 @@ processResults(CdbDispatchResult *dispatchResult)
 		if (segdbDesc->conn->wrote_xlog)
 		{
 			MarkTopTransactionWriteXLogOnExecutor();
+			addToGxactWriteSegments(segdbDesc->segindex);
 
 			/*
 			 * Reset the worte_xlog here. Since if the received pgresult not process

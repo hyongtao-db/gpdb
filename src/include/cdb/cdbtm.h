@@ -234,6 +234,8 @@ typedef struct TMGXACTLOCAL
 
 	Bitmapset					*dtxSegmentsMap;
 	List						*dtxSegments;
+	Bitmapset					*writeSegmentsMap;
+	List						*writeSegments;
 	List						*waitGxids;
 }	TMGXACTLOCAL;
 
@@ -346,6 +348,7 @@ extern void markCurrentGxactWriterGangLost(void);
 extern bool currentGxactWriterGangLost(void);
 
 extern void addToGxactDtxSegments(struct Gang* gp);
+extern void addToGxactWriteSegments(int segindex);
 extern bool CurrentDtxIsRollingback(void);
 
 extern pid_t DtxRecoveryPID(void);
