@@ -1840,6 +1840,14 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 	PG_END_TRY();
 }
 
+void
+ReorderBufferDistributedForget(ReorderBuffer *rb, DistributedTransactionId gxid) {
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "%d:record buffer:%ld\n", getpid(), gxid);
+	fclose(f);
+	rb->distributed_forget(rb, gxid);
+}
+
 /*
  * Abort a transaction that possibly has previous changes. Needs to be first
  * called for subtransactions and then for the toplevel xid.

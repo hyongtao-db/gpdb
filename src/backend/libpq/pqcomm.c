@@ -1538,7 +1538,7 @@ socket_flush(void)
  * and the socket is in non-blocking mode), or EOF if trouble.
  * --------------------------------
  */
-static int
+static int//看下打个日志来确定是不是这里。
 internal_flush(void)
 {
 	static int	last_reported_send_errno = 0;

@@ -1623,7 +1623,7 @@ RecordTransactionCommit(void)
 
 		SIMPLE_FAULT_INJECTOR("onephase_transaction_commit");
 
-		XactLogCommitRecord(xactStopTimestamp,
+		XactLogCommitRecord(xactStopTimestamp,//这里是被调的
 							GetPendingTablespaceForDeletionForCommit(),
 							nchildren, children, nrels, rels,
 							nmsgs, invalMessages,
@@ -1798,7 +1798,7 @@ RecordDistributedForgetCommitted(DistributedTransactionId gxid)
 
 	xlrec.gxid = gxid;
 
-	XLogBeginInsert();
+	XLogBeginInsert();//没有copy缓冲区，那会不会有点乱？
 	XLogRegisterData((char *) &xlrec, sizeof(xl_xact_distributed_forget));
 
 	XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_FORGET);
@@ -6753,7 +6753,7 @@ XactLogCommitRecord(TimestampTz commit_time,
 	else if (!TransactionIdIsValid(twophase_xid))
 		info = XLOG_XACT_COMMIT;
 	else
-		info = XLOG_XACT_COMMIT_PREPARED;
+		info = XLOG_XACT_COMMIT_PREPARED;//好的，从这里看下去，除了本地事务id之外，有没有分布式事务id
 
 	/* First figure out and collect all the information needed */
 
@@ -6883,7 +6883,7 @@ XactLogCommitRecord(TimestampTz commit_time,
 	{
 		XLogRegisterData((char *) (&xl_twophase), sizeof(xl_xact_twophase));
 		if (xl_xinfo.xinfo & XACT_XINFO_HAS_GID)
-			XLogRegisterData(unconstify(char *, twophase_gid), strlen(twophase_gid) + 1);
+			XLogRegisterData(unconstify(char *, twophase_gid), strlen(twophase_gid) + 1);//好的，有这个，看看我们可以用吗？
 	}
 
 	if (xl_xinfo.xinfo & XACT_XINFO_HAS_ORIGIN)

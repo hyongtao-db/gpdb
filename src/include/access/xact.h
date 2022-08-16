@@ -353,7 +353,7 @@ typedef struct xl_xact_parsed_commit
 	XLogRecPtr	origin_lsn;
 	TimestampTz origin_timestamp;
 
-	DistributedTransactionId        distribXid;
+	DistributedTransactionId        distribXid;//所以这里跟上边的那个两阶段是不一样的是吗？正好一个demo把这俩问题都解决了吧。
 } xl_xact_parsed_commit;
 
 typedef xl_xact_parsed_commit xl_xact_parsed_prepare;
@@ -390,6 +390,11 @@ typedef struct xl_xact_distributed_forget
 {
 	DistributedTransactionId gxid;
 } xl_xact_distributed_forget;
+
+typedef struct xl_xact_parsed_distributed_forget
+{
+	DistributedTransactionId gxid;
+} xl_xact_parsed_distributed_forget;
 
 /* ----------------
  *		extern definitions
@@ -503,6 +508,7 @@ extern const char *xact_identify(uint8 info);
 /* also in xactdesc.c, so they can be shared between front/backend code */
 extern void ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *parsed);
 extern void ParseAbortRecord(uint8 info, xl_xact_abort *xlrec, xl_xact_parsed_abort *parsed);
+extern void ParseDistributedForgetRecord(uint8 info, xl_xact_distributed_forget *xlrec, xl_xact_parsed_distributed_forget *parsed);
 
 extern void EnterParallelMode(void);
 extern void ExitParallelMode(void);

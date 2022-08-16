@@ -22,6 +22,8 @@
 #include "utils/memutils.h"
 #include "utils/rel.h"
 
+#include "unistd.h"
+
 PG_MODULE_MAGIC;
 
 /* These must be available to pg_dlsym() */
@@ -63,6 +65,9 @@ static void pg_decode_message(LogicalDecodingContext *ctx,
 							  bool transactional, const char *prefix,
 							  Size sz, const char *message);
 
+static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
+										 DistributedTransactionId gxid);
+
 void
 _PG_init(void)
 {
@@ -83,6 +88,8 @@ _PG_output_plugin_init(OutputPluginCallbacks *cb)
 	cb->filter_by_origin_cb = pg_decode_filter;
 	cb->shutdown_cb = pg_decode_shutdown;
 	cb->message_cb = pg_decode_message;
+
+	cb->distributed_forget_cb = pg_decode_distributed_forget;
 }
 
 
@@ -247,6 +254,30 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	if (data->include_timestamp)
 		appendStringInfo(ctx->out, " (at %s)",
 						 timestamptz_to_str(txn->commit_time));
+
+	OutputPluginWrite(ctx, true);
+}
+
+static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
+										 DistributedTransactionId gxid)
+{
+	TestDecodingData *data = ctx->output_plugin_private;
+
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "%d:test_decoding, call back:%ld\n", getpid(), gxid);
+
+	//这两行可别对我们造成什么影响
+	data->xact_wrote_changes = false;
+	if (data->skip_empty_xacts)
+		return;
+
+	fprintf(f, "%d:test_decoding, pass the return:%ld\n", getpid(), gxid);
+	fclose(f);
+
+	//这里我就跟上边保持一样了，理论上不会有
+	OutputPluginPrepareWrite(ctx, true);//推测2参是本次调用这里是否是最后一写。
+	
+	appendStringInfo(ctx->out, "DISTRIBUTED FORGET %ld", gxid);
 
 	OutputPluginWrite(ctx, true);
 }

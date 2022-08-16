@@ -326,6 +326,10 @@ typedef void (*ReorderBufferMessageCB) (
 										const char *prefix, Size sz,
 										const char *message);
 
+typedef void (*ReorderBufferDistributedForgetCB) (
+										ReorderBuffer *rb,
+										DistributedTransactionId gxid);										
+
 struct ReorderBuffer
 {
 	/*
@@ -363,6 +367,8 @@ struct ReorderBuffer
 	ReorderBufferApplyTruncateCB apply_truncate;
 	ReorderBufferCommitCB commit;
 	ReorderBufferMessageCB message;
+
+	ReorderBufferDistributedForgetCB distributed_forget;
 
 	/*
 	 * Pointer that will be passed untouched to the callbacks.
@@ -412,6 +418,7 @@ void		ReorderBufferQueueMessage(ReorderBuffer *, TransactionId, Snapshot snapsho
 void		ReorderBufferCommit(ReorderBuffer *, TransactionId,
 								XLogRecPtr commit_lsn, XLogRecPtr end_lsn,
 								TimestampTz commit_time, RepOriginId origin_id, XLogRecPtr origin_lsn);
+void		ReorderBufferDistributedForget(ReorderBuffer *rb, DistributedTransactionId gxid);
 void		ReorderBufferAssignChild(ReorderBuffer *, TransactionId, TransactionId, XLogRecPtr commit_lsn);
 void		ReorderBufferCommitChild(ReorderBuffer *, TransactionId, TransactionId,
 									 XLogRecPtr commit_lsn, XLogRecPtr end_lsn);

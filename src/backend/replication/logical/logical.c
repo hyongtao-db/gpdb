@@ -43,6 +43,7 @@
 #include "storage/procarray.h"
 
 #include "utils/memutils.h"
+#include "unistd.h"
 
 /* data for errcontext callback */
 typedef struct LogicalErrorCallbackState
@@ -67,6 +68,8 @@ static void truncate_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 static void message_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 							   XLogRecPtr message_lsn, bool transactional,
 							   const char *prefix, Size message_size, const char *message);
+
+static void distributed_forget_cb_wrapper(ReorderBuffer *cache, DistributedTransactionId gxid);
 
 static void LoadOutputPlugin(OutputPluginCallbacks *callbacks, char *plugin);
 
@@ -191,6 +194,8 @@ StartupDecodingContext(List *output_plugin_options,
 	ctx->reorder->apply_truncate = truncate_cb_wrapper;
 	ctx->reorder->commit = commit_cb_wrapper;
 	ctx->reorder->message = message_cb_wrapper;
+
+	ctx->reorder->distributed_forget = distributed_forget_cb_wrapper;
 
 	ctx->out = makeStringInfo();
 	ctx->prepare_write = prepare_write;
@@ -535,7 +540,7 @@ OutputPluginPrepareWrite(struct LogicalDecodingContext *ctx, bool last_write)
 /*
  * Perform a write using the context's output routine.
  */
-void
+void//之前看到过，应该是需要个write，write_prepare函数？
 OutputPluginWrite(struct LogicalDecodingContext *ctx, bool last_write)
 {
 	if (!ctx->prepared_write)
@@ -721,6 +726,26 @@ commit_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 
 	/* Pop the error context stack */
 	error_context_stack = errcallback.previous;
+}
+
+static void distributed_forget_cb_wrapper(ReorderBuffer *cache, DistributedTransactionId gxid)
+{
+	LogicalDecodingContext *ctx = cache->private_data;
+	//LogicalErrorCallbackState state;
+	//ErrorContextCallback errcallback;看看这个到时候是否需要？
+
+	/* set output state */
+	//这3条是必须的吗？我不写会不会有问题？
+	//ctx->accept_writes = true;
+	//ctx->write_xid = txn->xid;
+	//ctx->write_location = txn->end_lsn;
+
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "%d:logical.c wrapper:%ld\n", getpid(), gxid);
+	fclose(f);
+
+	/* do the actual work: call callback */
+	ctx->callbacks.distributed_forget_cb(ctx, gxid);
 }
 
 static void
