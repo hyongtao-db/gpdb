@@ -1621,7 +1621,7 @@ RecordTransactionCommit(void)
 
 		SetCurrentTransactionStopTimestamp();
 
-		SIMPLE_FAULT_INJECTOR("onephase_transaction_commit");
+		SIMPLE_FAULT_INJECTOR("onephase_transaction_commit");//这是怎么得出的说我是单阶段的结论呢？
 
 		XactLogCommitRecord(xactStopTimestamp,//这里是被调的
 							GetPendingTablespaceForDeletionForCommit(),
@@ -2822,7 +2822,7 @@ CommitTransaction(void)
 	/*
 	 * Prepare all QE.
 	 */
-	prepareDtxTransaction();
+	prepareDtxTransaction();//具体在哪里接受QE传过来的消息的？
 
 #ifdef FAULT_INJECTOR
 	if (isPreparedDtxTransaction())
@@ -6809,7 +6809,7 @@ XactLogCommitRecord(TimestampTz commit_time,
 		xl_deldbs.ndeldbs = ndeldbs;
 	}
 
-	if (TransactionIdIsValid(twophase_xid))
+	if (TransactionIdIsValid(twophase_xid))//单阶段的话，这个是我们的反例
 	{
 		xl_xinfo.xinfo |= XACT_XINFO_HAS_TWOPHASE;
 		xl_twophase.xid = twophase_xid;
@@ -6828,10 +6828,10 @@ XactLogCommitRecord(TimestampTz commit_time,
 		xl_origin.origin_timestamp = replorigin_session_origin_timestamp;
 	}
 
-	if (isDtxPrepared || isOnePhaseQE)
+	if (isDtxPrepared || isOnePhaseQE)//这部分加些日志吧
 	{
 		xl_xinfo.xinfo |= XACT_XINFO_HAS_DISTRIB;
-		xl_distrib.distrib_xid = getDistributedTransactionId();
+		xl_distrib.distrib_xid = getDistributedTransactionId();//就是说单阶段的话，但是我怎么跟2pc事务做区分呢？
 	}
 
 	if (xl_xinfo.xinfo != 0)
@@ -6898,7 +6898,7 @@ XactLogCommitRecord(TimestampTz commit_time,
 	if (isDtxPrepared)
 		insertingDistributedCommitted();
 
-	recptr = XLogInsert(RM_XACT_ID, info);
+	recptr = XLogInsert(RM_XACT_ID, info);//看来也只有这里能写提交点日志了
 
 	if (isDtxPrepared)
 		insertedDistributedCommitted();

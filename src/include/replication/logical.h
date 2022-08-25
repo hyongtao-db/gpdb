@@ -87,7 +87,7 @@ typedef struct LogicalDecodingContext
 	 */
 	bool		accept_writes;
 	bool		prepared_write;
-	XLogRecPtr	write_location;
+	XLogRecPtr	write_location;//这里应该是当前日志进度，看看这个咋维护的
 	TransactionId write_xid;
 } LogicalDecodingContext;
 

@@ -70,13 +70,13 @@ typedef struct ReplicationSlotPersistentData
 	TransactionId catalog_xmin;
 
 	/* oldest LSN that might be required by this replication slot */
-	XLogRecPtr	restart_lsn;
+	XLogRecPtr	restart_lsn;//按照注释理解，这个值会比confirm小，但还会被用到，不过只要他不是跟walsender发送进度相关，我们就不必管他。
 
 	/*
 	 * Oldest LSN that the client has acked receipt for.  This is used as the
 	 * start_lsn point in case the client doesn't specify one, and also as a
 	 * safety measure to jump forwards in case the client specifies a
-	 * start_lsn that's further in the past than this value.
+	 * start_lsn that's further in the past than this value.//这里是说我们生产slot时传入的start_lsn比这个小，是可以直接跳到这个上边。
 	 */
 	XLogRecPtr	confirmed_flush;
 

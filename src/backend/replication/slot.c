@@ -1004,10 +1004,10 @@ CheckSlotRequirements(void)
 }
 
 /*
- * Reserve WAL for the currently active slot.
+ * Reserve WAL for the currently active slot.//保留是说不让你删除吗？
  *
  * Compute and set restart_lsn in a manner that's appropriate for the type of
- * the slot and concurrency safe.
+ * the slot and concurrency safe.//是针对restart_lsn的吗？
  */
 void
 ReplicationSlotReserveWal(void)
@@ -1286,7 +1286,7 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
 
 	SpinLockAcquire(&slot->mutex);
 
-	memcpy(&cp.slotdata, &slot->data, sizeof(ReplicationSlotPersistentData));
+	memcpy(&cp.slotdata, &slot->data, sizeof(ReplicationSlotPersistentData));//这里持久化，这赋值真是花
 
 	SpinLockRelease(&slot->mutex);
 
@@ -1367,7 +1367,7 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
 	 */
 	SpinLockAcquire(&slot->mutex);
 	if (!slot->just_dirtied)
-		slot->dirty = false;
+		slot->dirty = false;//吼猴
 	SpinLockRelease(&slot->mutex);
 
 	LWLockRelease(&slot->io_in_progress_lock);

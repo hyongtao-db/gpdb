@@ -356,7 +356,7 @@ notifyCommittedDtxTransaction(void)
 		case DTX_STATE_INSERTED_COMMITTED:
 			doNotifyingCommitPrepared();
 			break;
-		case DTX_STATE_NOTIFYING_ONE_PHASE_COMMIT:
+		case DTX_STATE_NOTIFYING_ONE_PHASE_COMMIT://单阶段，我如果啥都不向你发，你也啥都不给我回？
 		case DTX_STATE_ONE_PHASE_COMMIT:
 			/* Already notified for one phase commit or no need to notify. */
 			break;
@@ -1207,7 +1207,7 @@ currentDtxDispatchProtocolCommand(DtxProtocolCommand dtxProtocolCommand, bool ra
 										MyTmGxactLocal->dtxSegments, NULL, 0);
 }
 
-bool
+bool//这是个同步阻塞函数吗？
 doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 							 char *gid,
 							 bool raiseError,
@@ -1241,7 +1241,7 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 					dtxProtocolCommand, dtxProtocolCommandStr,
 					segmentsToContentStr(dtxSegments))));
 
-	ErrorData *qeError;
+	ErrorData *qeError;//这返回的是每个QE的返回结果吗？
 	results = CdbDispatchDtxProtocolCommand(dtxProtocolCommand,
 											dtxProtocolCommandStr,
 											gid,
@@ -2025,11 +2025,11 @@ performDtxProtocolPrepare(const char *gid)
 }
 
 static void
-sendWaitGxidsToQD(List *waitGxids)
+sendWaitGxidsToQD(List *waitGxids)//如果是1阶段的话，我给QD回的都是啥啊。。。
 {
 	ListCell *lc;
 	StringInfoData buf;
-	int len = list_length(waitGxids);
+	int len = list_length(waitGxids);//怎么会这么多？
 
 	if (len == 0)
 		return;

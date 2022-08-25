@@ -145,7 +145,7 @@ create_logical_replication_slot(char *name, char *plugin,
 	 * error as well.
 	 */
 	ReplicationSlotCreate(name, true,
-						  temporary ? RS_TEMPORARY : RS_EPHEMERAL);
+						  temporary ? RS_TEMPORARY : RS_EPHEMERAL);//这个默认传的是false吧？
 
 	/*
 	 * Create logical decoding context, to build the initial snapshot.
@@ -191,7 +191,7 @@ pg_create_logical_replication_slot(PG_FUNCTION_ARGS)
 									InvalidXLogRecPtr);
 
 	values[0] = NameGetDatum(&MyReplicationSlot->data.name);
-	values[1] = LSNGetDatum(MyReplicationSlot->data.confirmed_flush);
+	values[1] = LSNGetDatum(MyReplicationSlot->data.confirmed_flush);//你从这里看，其实就是你在psql执行玩函数之后，他所显示的内容。
 
 	memset(nulls, 0, sizeof(nulls));
 
@@ -396,7 +396,7 @@ pg_physical_replication_slot_advance(XLogRecPtr moveto)
  * WAL and removal of old catalog tuples.  As decoding is done in fast_forward
  * mode, no changes are generated anyway.
  */
-static XLogRecPtr
+static XLogRecPtr//help函数，这是我们可以用的吗？还是得找逻辑复制链条看看
 pg_logical_replication_slot_advance(XLogRecPtr moveto)
 {
 	LogicalDecodingContext *ctx;

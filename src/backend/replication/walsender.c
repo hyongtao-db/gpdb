@@ -1138,7 +1138,7 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 
 
 	/* Start reading WAL from the oldest required WAL. */
-	logical_startptr = MyReplicationSlot->data.restart_lsn;
+	logical_startptr = MyReplicationSlot->data.restart_lsn;//要看这俩成员具体啥区别，需要
 
 	/*
 	 * Report the location after which we'll send out further commits as the
@@ -1148,7 +1148,7 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 
 	/* Also update the sent position status in shared memory */
 	SpinLockAcquire(&MyWalSnd->mutex);
-	MyWalSnd->sentPtr = MyReplicationSlot->data.restart_lsn;
+	MyWalSnd->sentPtr = MyReplicationSlot->data.restart_lsn;//看注释感觉这俩是一个意思啊
 	SpinLockRelease(&MyWalSnd->mutex);
 
 	replication_active = true;

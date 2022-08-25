@@ -124,7 +124,7 @@ logical_read_local_xlog_page(XLogReaderState *state, XLogRecPtr targetPagePtr,
  * Helper function for the various SQL callable logical decoding functions.
  */
 static Datum
-pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool binary)
+pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool binary)//看看2参怎么确认的读日志进度？
 {
 	Name		name;
 	XLogRecPtr	upto_lsn;
@@ -246,7 +246,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 
 	PG_TRY();
 	{
-		/* restart at slot's confirmed_flush */
+		/* restart at slot's confirmed_flush *///这句话是比较重要的
 		ctx = CreateDecodingContext(InvalidXLogRecPtr,
 									options,
 									false,
@@ -287,7 +287,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 			XLogRecord *record;
 			char	   *errm = NULL;
 
-			record = XLogReadRecord(ctx->reader, startptr, &errm);
+			record = XLogReadRecord(ctx->reader, startptr, &errm);//这里会做递增吗？
 			if (errm)
 				elog(ERROR, "%s", errm);
 
@@ -344,7 +344,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 			 * We'll still lose its position on crash, as documented, but it's
 			 * better than always losing the position even on clean restart.
 			 */
-			ReplicationSlotMarkDirty();
+			ReplicationSlotMarkDirty();//这里仅仅是标脏就可以了吗？
 		}
 
 		/* free context, call shutdown callback */
