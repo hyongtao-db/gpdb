@@ -249,7 +249,6 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 			{
 				FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
 				fprintf(f, "%d:decode commit act case: %d\n", getpid(), info);
-				fclose(f);
 
 				xl_xact_commit *xlrec;
 				xl_xact_parsed_commit parsed;
@@ -258,10 +257,19 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 				xlrec = (xl_xact_commit *) XLogRecGetData(r);
 				ParseCommitRecord(XLogRecGetInfo(buf->record), xlrec, &parsed);
 
-				if (!TransactionIdIsValid(parsed.twophase_xid))
+				if (!TransactionIdIsValid(parsed.twophase_xid))//这两种情况，是不是都是分布式事务，只是有一个
+				{
+					fprintf(f, "DecodeXactOp: gxid case1, %d\n", getpid());
 					xid = XLogRecGetXid(r);
+				}
 				else
+				{
+					fprintf(f, "DecodeXactOp: gxid case2, %d\n", getpid());
 					xid = parsed.twophase_xid;
+				}
+					
+				fprintf(f, "DecodeXactOp: one_phase:%d, %d\n", parsed.is_one_phase, getpid());
+				fclose(f);
 
 				DecodeCommit(ctx, buf, &parsed, xid);//虽然把两种情况揉一起了，但暂时看对我没有什么影响
 				break;
@@ -616,6 +624,9 @@ DecodeCommit(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 	RepOriginId origin_id = XLogRecGetOrigin(buf->record);
 	int			i;
 
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "DecodeCommit: step into, %d\n", getpid());
+
 	if (parsed->xinfo & XACT_XINFO_HAS_ORIGIN)
 	{
 		origin_lsn = parsed->origin_lsn;
@@ -684,9 +695,12 @@ DecodeCommit(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 								 buf->origptr, buf->endptr);
 	}
 
+	fprintf(f, "DecodeCommit: one_phase:%d, %d\n", parsed->is_one_phase, getpid());
+	fclose(f);
+
 	/* replay actions of all transaction + subtransactions in order */
 	ReorderBufferCommit(ctx->reorder, xid, buf->origptr, buf->endptr,
-						commit_time, origin_id, origin_lsn);
+						commit_time, origin_id, origin_lsn, parsed->is_one_phase);
 }
 
 static void

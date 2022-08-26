@@ -6755,6 +6755,9 @@ XactLogCommitRecord(TimestampTz commit_time,
 	else
 		info = XLOG_XACT_COMMIT_PREPARED;//好的，从这里看下去，除了本地事务id之外，有没有分布式事务id
 
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "XactLogCommitRecord info:%d, pid:%d\n", info, getpid());
+
 	/* First figure out and collect all the information needed */
 
 	xlrec.xact_time = commit_time;
@@ -6830,9 +6833,21 @@ XactLogCommitRecord(TimestampTz commit_time,
 
 	if (isDtxPrepared || isOnePhaseQE)//这部分加些日志吧
 	{
+		fprintf(f, "XactLogCommitRecord in onephase scope pid:%d\n", getpid());
+
 		xl_xinfo.xinfo |= XACT_XINFO_HAS_DISTRIB;
 		xl_distrib.distrib_xid = getDistributedTransactionId();//就是说单阶段的话，但是我怎么跟2pc事务做区分呢？
+		if (isOnePhaseQE)
+		{
+			fprintf(f, "XactLogCommitRecord one phase bool assign pid:%d\n", getpid());
+			xl_distrib.is_one_phase = true;
+		}
+		else
+		{
+			xl_distrib.is_one_phase = false;
+		}
 	}
+	fclose(f);
 
 	if (xl_xinfo.xinfo != 0)
 		info |= XLOG_XACT_HAS_INFO;

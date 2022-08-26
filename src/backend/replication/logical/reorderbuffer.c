@@ -1434,7 +1434,7 @@ void
 ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 					XLogRecPtr commit_lsn, XLogRecPtr end_lsn,
 					TimestampTz commit_time,
-					RepOriginId origin_id, XLogRecPtr origin_lsn)
+					RepOriginId origin_id, XLogRecPtr origin_lsn, bool is_one_phase)
 {
 	ReorderBufferTXN *txn;
 	volatile Snapshot snapshot_now;
@@ -1475,6 +1475,11 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 
 	/* setup the initial snapshot */
 	SetupHistoricSnapshot(snapshot_now, txn->tuplecid_hash);
+
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "ReorderBufferCommit: txn->one_phase:%d, %d\n", is_one_phase, getpid());
+	fclose(f);
+	txn->is_one_phase = is_one_phase;
 
 	/*
 	 * Decoding needs access to syscaches et al., which in turn use

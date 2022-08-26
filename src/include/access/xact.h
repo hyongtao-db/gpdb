@@ -237,6 +237,7 @@ typedef struct xl_xact_xinfo
 typedef struct xl_xact_distrib
 {
 	DistributedTransactionId distrib_xid;
+	bool is_one_phase;
 } xl_xact_distrib;
 
 typedef struct xl_xact_dbinfo
@@ -354,6 +355,8 @@ typedef struct xl_xact_parsed_commit
 	TimestampTz origin_timestamp;
 
 	DistributedTransactionId        distribXid;//所以这里跟上边的那个两阶段是不一样的是吗？正好一个demo把这俩问题都解决了吧。
+
+	bool is_one_phase;//注意下初始化清把内存清0吧
 } xl_xact_parsed_commit;
 
 typedef xl_xact_parsed_commit xl_xact_parsed_prepare;
