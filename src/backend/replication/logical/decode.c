@@ -269,6 +269,7 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 				}
 					
 				fprintf(f, "DecodeXactOp: one_phase:%d, %d\n", parsed.is_one_phase, getpid());
+				fprintf(f, "DecodeXactOp: distribXid:%d, %d\n", parsed.distribXid, getpid());
 				fclose(f);
 
 				DecodeCommit(ctx, buf, &parsed, xid);//虽然把两种情况揉一起了，但暂时看对我没有什么影响
@@ -696,11 +697,12 @@ DecodeCommit(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 	}
 
 	fprintf(f, "DecodeCommit: one_phase:%d, %d\n", parsed->is_one_phase, getpid());
+	fprintf(f, "DecodeCommit: distribXid:%d, %d\n", parsed->distribXid, getpid());
 	fclose(f);
 
 	/* replay actions of all transaction + subtransactions in order */
 	ReorderBufferCommit(ctx->reorder, xid, buf->origptr, buf->endptr,
-						commit_time, origin_id, origin_lsn, parsed->is_one_phase);
+						commit_time, origin_id, origin_lsn, parsed->distribXid, parsed->is_one_phase);
 }
 
 static void

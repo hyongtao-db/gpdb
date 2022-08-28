@@ -6714,7 +6714,7 @@ xactGetCommittedChildren(TransactionId **ptr)
  * Log the commit record for a plain or twophase transaction commit.
  *
  * A 2pc commit will be emitted when twophase_xid is valid, a plain one
- * otherwise.
+ * otherwise.//所以这俩区别在哪啊？我咋开始感觉你这个2pc跟我们的分布式事务不是一个事呢。。。
  */
 XLogRecPtr
 XactLogCommitRecord(TimestampTz commit_time,
@@ -6739,7 +6739,7 @@ XactLogCommitRecord(TimestampTz commit_time,
 	xl_xact_deldbs xl_deldbs;
 	XLogRecPtr recptr;
 	bool isOnePhaseQE = (Gp_role == GP_ROLE_EXECUTE && MyTmGxactLocal->isOnePhaseCommit);
-	bool isDtxPrepared = isPreparedDtxTransaction();
+	bool isDtxPrepared = isPreparedDtxTransaction();//坑了，这个是master独有的。。。
 
 	uint8		info;
 
@@ -6757,6 +6757,8 @@ XactLogCommitRecord(TimestampTz commit_time,
 
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
 	fprintf(f, "XactLogCommitRecord info:%d, pid:%d\n", info, getpid());
+	fprintf(f, "twophase_xid:%d, pid:%d\n", twophase_xid, getpid());
+	fprintf(f, "true gid:%d, pid:%d\n", getDistributedTransactionId(), getpid());
 
 	/* First figure out and collect all the information needed */
 
@@ -6831,12 +6833,14 @@ XactLogCommitRecord(TimestampTz commit_time,
 		xl_origin.origin_timestamp = replorigin_session_origin_timestamp;
 	}
 
-	if (isDtxPrepared || isOnePhaseQE)//这部分加些日志吧
+	//if (isDtxPrepared || isOnePhaseQE)//这部分加些日志吧
+	if (isDtxPrepared || isOnePhaseQE || info == XLOG_XACT_COMMIT_PREPARED)
 	{
 		fprintf(f, "XactLogCommitRecord in onephase scope pid:%d\n", getpid());
 
 		xl_xinfo.xinfo |= XACT_XINFO_HAS_DISTRIB;
 		xl_distrib.distrib_xid = getDistributedTransactionId();//就是说单阶段的话，但是我怎么跟2pc事务做区分呢？
+		fprintf(f, "XactLogCommitRecord distrib_xid:%d, pid:%d\n", xl_distrib.distrib_xid, getpid());
 		if (isOnePhaseQE)
 		{
 			fprintf(f, "XactLogCommitRecord one phase bool assign pid:%d\n", getpid());

@@ -22,7 +22,7 @@ struct Gang;
 
 /**
  * DTX states, used to track the state of the distributed transaction
- *   from the QD's point of view.
+ *   from the QD's point of view.//这里仅仅是QD的
  */
 typedef enum
 {

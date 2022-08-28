@@ -710,6 +710,7 @@ commit_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
 	fprintf(f, "commit_cb_wrapper: one_phase:%d, %d\n", txn->is_one_phase, getpid());
+	fprintf(f, "commit_cb_wrapper: gxid:%d, %d\n", txn->gxid, getpid());
 	fclose(f);
 
 	/* Push callback + info on the error context stack */

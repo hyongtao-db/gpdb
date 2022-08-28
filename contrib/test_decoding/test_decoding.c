@@ -256,6 +256,8 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 		appendStringInfo(ctx->out, " ONE_PHASE");
 	}
 
+	appendStringInfo(ctx->out, " gxid:%d", txn->gxid);
+
 	if (data->include_timestamp)
 		appendStringInfo(ctx->out, " (at %s)",
 						 timestamptz_to_str(txn->commit_time));

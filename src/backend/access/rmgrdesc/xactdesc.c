@@ -149,6 +149,7 @@ ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *pars
 
 		FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
 		fprintf(f, "ParseCommitRecord parse one_phase:%d, pid:%d\n", xl_distrib->is_one_phase, getpid());
+		fprintf(f, "ParseCommitRecord distribXid:%d, pid:%d\n", xl_distrib->distrib_xid, getpid());
 		fclose(f);
 
 		data += sizeof(xl_xact_distrib);

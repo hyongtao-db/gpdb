@@ -2378,7 +2378,7 @@ ProcessTwoPhaseBuffer(TransactionId xid,
  * We know the transaction made at least one XLOG entry (its PREPARE),
  * so it is never possible to optimize out the commit record.
  */
-static void
+static void//这里看来是qe上的
 RecordTransactionCommitPrepared(TransactionId xid,
 								int nchildren,
 								TransactionId *children,
@@ -2462,7 +2462,7 @@ RecordTransactionCommitPrepared(TransactionId xid,
 
 	/* UNDONE: What are the locking issues here? */
 	/*
-	 * Mark the distributed transaction committed.
+	 * Mark the distributed transaction committed.//上边不是已经写了吗，这里又是干啥呢
 	 */
 	DistributedLog_SetCommittedTree(xid, nchildren, children,
 									distribXid,

@@ -23,7 +23,7 @@
  */
 #define GpSegmentConfigRelationName		"gp_segment_configuration"
 
-#define MASTER_CONTENT_ID (-1)
+#define MASTER_CONTENT_ID (-1)//无意间发现这个。。。
 
 #define GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY 'p'
 #define GP_SEGMENT_CONFIGURATION_ROLE_MIRROR 'm'

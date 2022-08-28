@@ -1434,7 +1434,7 @@ void
 ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 					XLogRecPtr commit_lsn, XLogRecPtr end_lsn,
 					TimestampTz commit_time,
-					RepOriginId origin_id, XLogRecPtr origin_lsn, bool is_one_phase)
+					RepOriginId origin_id, XLogRecPtr origin_lsn, DistributedTransactionId gxid,  bool is_one_phase)
 {
 	ReorderBufferTXN *txn;
 	volatile Snapshot snapshot_now;
@@ -1478,7 +1478,9 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
 	fprintf(f, "ReorderBufferCommit: txn->one_phase:%d, %d\n", is_one_phase, getpid());
+	fprintf(f, "ReorderBufferCommit: txn->gxid:%d, %d\n", gxid, getpid());
 	fclose(f);
+	txn->gxid = gxid;
 	txn->is_one_phase = is_one_phase;
 
 	/*
@@ -1587,7 +1589,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 					if (!IsToastRelation(relation))
 					{
 						ReorderBufferToastReplace(rb, txn, relation, change);
-						rb->apply_change(rb, txn, relation, change);
+						rb->apply_change(rb, txn, relation, change);//原来如此。。。也是在commit回调时才有的
 
 						/*
 						 * Only clear reassembled toast chunks if we're sure
