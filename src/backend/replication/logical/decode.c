@@ -80,7 +80,7 @@ static void DecodeXLogTuple(char *data, Size len, ReorderBufferTupleBuf *tup);
 
 static void DecodeDistributedForget(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 			                        xl_xact_parsed_distributed_forget *parsed, 
-						            DistributedTransactionId gxid);
+						            DistributedTransactionId gxid, int cnt_segments);
 
 /*
  * Take every XLogReadRecord()ed record and perform the actions required to
@@ -292,17 +292,19 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 				xl_xact_distributed_forget *xlrec;
 				xl_xact_parsed_distributed_forget parsed;
 				DistributedTransactionId gid;
+				int cnt_segments;
 
 				xlrec = (xl_xact_distributed_forget *) XLogRecGetData(r);
 				ParseDistributedForgetRecord(XLogRecGetInfo(buf->record), xlrec, &parsed);
 
 				gid = parsed.gxid;
+				cnt_segments = parsed.cnt_segments;
 
 				f = fopen("/home/gpadmin/wangchonglog", "a");
 				fprintf(f, "%d:decode distributed transaction id:%ld\n", getpid(), gid);
 				fclose(f);
 
-				DecodeDistributedForget(ctx, buf, &parsed, gid);//这个会难一些啊
+				DecodeDistributedForget(ctx, buf, &parsed, gid, cnt_segments);//这个会难一些啊
 				break;
 			}
 		case XLOG_XACT_ABORT:
@@ -707,9 +709,9 @@ DecodeCommit(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 
 static void
 DecodeDistributedForget(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
-			 xl_xact_parsed_distributed_forget *parsed, DistributedTransactionId gxid)
+			 xl_xact_parsed_distributed_forget *parsed, DistributedTransactionId gxid, int cnt_segments)
 {
-	ReorderBufferDistributedForget(ctx->reorder, gxid);
+	ReorderBufferDistributedForget(ctx->reorder, gxid, cnt_segments);
 }
 
 /*

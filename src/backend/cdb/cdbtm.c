@@ -2371,7 +2371,7 @@ currentGxactWriterGangLost(void)
 }
 
 /*
- * Record which segment involved in the two phase commit.
+ * Record which segment involved in the two phase commit.//这个注释说的挺好
  */
 void
 addToGxactDtxSegments(Gang *gang)

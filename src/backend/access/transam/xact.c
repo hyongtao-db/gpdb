@@ -1797,6 +1797,7 @@ RecordDistributedForgetCommitted(DistributedTransactionId gxid)
 	xl_xact_distributed_forget xlrec;
 
 	xlrec.gxid = gxid;
+	xlrec.cnt_segments = list_length(MyTmGxactLocal->dtxSegments);
 
 	XLogBeginInsert();//没有copy缓冲区，那会不会有点乱？
 	XLogRegisterData((char *) &xlrec, sizeof(xl_xact_distributed_forget));

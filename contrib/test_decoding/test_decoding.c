@@ -66,7 +66,7 @@ static void pg_decode_message(LogicalDecodingContext *ctx,
 							  Size sz, const char *message);
 
 static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
-										 DistributedTransactionId gxid);
+										 DistributedTransactionId gxid, int cnt_segments);
 
 void
 _PG_init(void)
@@ -256,7 +256,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 		appendStringInfo(ctx->out, " ONE_PHASE");
 	}
 
-	appendStringInfo(ctx->out, " gxid:%d", txn->gxid);
+	appendStringInfo(ctx->out, " gxid:%ld", txn->gxid);
 
 	if (data->include_timestamp)
 		appendStringInfo(ctx->out, " (at %s)",
@@ -266,7 +266,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 }
 
 static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
-										 DistributedTransactionId gxid)
+										 DistributedTransactionId gxid, int cnt_segments)
 {
 	TestDecodingData *data = ctx->output_plugin_private;
 
@@ -285,6 +285,7 @@ static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
 	OutputPluginPrepareWrite(ctx, true);//推测2参是本次调用这里是否是最后一写。
 	
 	appendStringInfo(ctx->out, "DISTRIBUTED FORGET %ld", gxid);
+	appendStringInfo(ctx->out, " count of segments:%d", cnt_segments);
 
 	OutputPluginWrite(ctx, true);
 }

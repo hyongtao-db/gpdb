@@ -1848,11 +1848,11 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 }
 
 void
-ReorderBufferDistributedForget(ReorderBuffer *rb, DistributedTransactionId gxid) {
+ReorderBufferDistributedForget(ReorderBuffer *rb, DistributedTransactionId gxid, int cnt_segments) {
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
 	fprintf(f, "%d:record buffer:%ld\n", getpid(), gxid);
 	fclose(f);
-	rb->distributed_forget(rb, gxid);
+	rb->distributed_forget(rb, gxid, cnt_segments);
 }
 
 /*

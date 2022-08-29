@@ -392,11 +392,13 @@ typedef struct xl_xact_parsed_abort
 typedef struct xl_xact_distributed_forget
 {
 	DistributedTransactionId gxid;
+	int cnt_segments;
 } xl_xact_distributed_forget;
 
 typedef struct xl_xact_parsed_distributed_forget
 {
 	DistributedTransactionId gxid;
+	int cnt_segments;
 } xl_xact_parsed_distributed_forget;
 
 /* ----------------

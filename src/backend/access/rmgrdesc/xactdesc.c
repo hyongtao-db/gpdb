@@ -159,7 +159,8 @@ ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *pars
 void//我这里需要传入这个info吗？
 ParseDistributedForgetRecord(uint8 info, xl_xact_distributed_forget *xlrec, xl_xact_parsed_distributed_forget *parsed)
 {
-	parsed->gxid = xlrec->gxid;	
+	parsed->gxid = xlrec->gxid;
+	parsed->cnt_segments = xlrec->cnt_segments;
 }
 
 void
