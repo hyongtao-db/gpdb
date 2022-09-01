@@ -1,5 +1,4 @@
 # contrib/test_decoding/Makefile
-
 MODULES = test_decoding
 PGFILEDESC = "test_decoding - example of a logical decoding output plugin"
 
@@ -26,6 +25,8 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
+
+LDFLAGS += -lrdkafka
 
 # But it can nonetheless be very helpful to run tests on preexisting
 # installation, allow to do so, but only if requested explicitly.

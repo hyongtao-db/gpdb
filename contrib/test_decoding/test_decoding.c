@@ -21,6 +21,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+#include "librdkafka/rdkafka.h"
 
 PG_MODULE_MAGIC;
 
@@ -63,10 +64,80 @@ static void pg_decode_message(LogicalDecodingContext *ctx,
 							  bool transactional, const char *prefix,
 							  Size sz, const char *message);
 
+rd_kafka_t *rk;            /*Producer instance handle*/
+rd_kafka_topic_t *rkt;     /*topic对象*/
+const char *topic;
+const char *brokers;   
+
+/*
+    每条消息调用一次该回调函数，说明消息是传递成功(rkmessage->err == RD_KAFKA_RESP_ERR_NO_ERROR)
+    还是传递失败(rkmessage->err != RD_KAFKA_RESP_ERR_NO_ERROR)
+    该回调函数由rd_kafka_poll()触发，在应用程序的线程上执行
+ */
+static void dr_msg_cb(rd_kafka_t *rk,
+					  const rd_kafka_message_t *rkmessage, void *opaque){
+		if(rkmessage->err)
+			fprintf(stderr, "%% Message delivery failed: %s\n", 
+					rd_kafka_err2str(rkmessage->err));
+		else
+			fprintf(stderr,
+                        "%% Message delivered (%zd bytes, "
+                        "partition %"PRId32")\n",
+                        rkmessage->len, rkmessage->partition);
+        /* rkmessage被librdkafka自动销毁*/
+}
+
+
+static void init_librdkafka(){
+	rd_kafka_conf_t *conf;     /*临时配置对象*/
+	char errstr[512];          
+            
+ 	topic = "test";
+	brokers = "localhost:9092";
+	/* 创建一个kafka配置占位 */
+	conf = rd_kafka_conf_new();
+ 
+    /*创建broker集群*/
+	if (rd_kafka_conf_set(conf, "bootstrap.servers", brokers, errstr,
+				sizeof(errstr)) != RD_KAFKA_CONF_OK){
+		fprintf(stderr, "%s\n", errstr);
+		return;
+	}
+ 
+    /*设置发送报告回调函数，rd_kafka_produce()接收的每条消息都会调用一次该回调函数
+     *应用程序需要定期调用rd_kafka_poll()来服务排队的发送报告回调函数*/
+	rd_kafka_conf_set_dr_msg_cb(conf, dr_msg_cb);
+ 
+    /*创建producer实例
+      rd_kafka_new()获取conf对象的所有权,应用程序在此调用之后不得再次引用它*/
+	rk = rd_kafka_new(RD_KAFKA_PRODUCER, conf, errstr, sizeof(errstr));
+	if(!rk){
+		fprintf(stderr, "%% Failed to create new producer:%s\n", errstr);
+		return;
+	}
+ 
+    /*实例化一个或多个topics(`rd_kafka_topic_t`)来提供生产或消费，topic
+    对象保存topic特定的配置，并在内部填充所有可用分区和leader brokers，*/
+	rkt = rd_kafka_topic_new(rk, topic, NULL);
+	if (!rkt){
+		fprintf(stderr, "%% Failed to create topic object: %s\n", 
+				rd_kafka_err2str(rd_kafka_last_error()));
+		rd_kafka_destroy(rk);
+		return;
+	}
+
+	if (rd_kafka_produce(rkt, RD_KAFKA_PARTITION_UA, RD_KAFKA_MSG_F_COPY,
+         "init data", 10, NULL, 0, NULL) == -1) {
+		fprintf(stderr, "%% Failed to produce to topic %s: %s\n",
+		topic, rd_kafka_err2str(rd_kafka_errno2err(errno)));
+	}
+}
+
 void
 _PG_init(void)
 {
 	/* other plugins can perform things here */
+	init_librdkafka();
 }
 
 /* specify output plugin callbacks */
@@ -84,7 +155,6 @@ _PG_output_plugin_init(OutputPluginCallbacks *cb)
 	cb->shutdown_cb = pg_decode_shutdown;
 	cb->message_cb = pg_decode_message;
 }
-
 
 /* initialize this plugin */
 static void
@@ -437,6 +507,11 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				tuple_to_stringinfo(ctx->out, tupdesc,
 									&change->data.tp.newtuple->tuple,
 									false);
+			if (rd_kafka_produce(rkt, RD_KAFKA_PARTITION_UA, RD_KAFKA_MSG_F_COPY,
+				"data", 5, NULL, 0, NULL) == -1) {
+				fprintf(stderr, "%% Failed to produce to topic %s: %s\n",
+				topic, rd_kafka_err2str(rd_kafka_errno2err(errno)));
+			}
 			break;
 		case REORDER_BUFFER_CHANGE_UPDATE:
 			appendStringInfoString(ctx->out, " UPDATE:");
