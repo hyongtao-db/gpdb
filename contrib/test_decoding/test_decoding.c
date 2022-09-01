@@ -386,6 +386,78 @@ print_literal(StringInfo s, Oid typid, char *outputstr)
 
 /* print the tuple 'tuple' into the StringInfo s */
 static void
+tuple_to_kafka_value(StringInfo s, TupleDesc tupdesc, HeapTuple tuple, bool skip_nulls)
+{
+	int			natt;
+
+	/* print all columns individually */
+	for (natt = 0; natt < tupdesc->natts; natt++)
+	{
+		Form_pg_attribute attr; /* the attribute itself */
+		Oid			typid;		/* type of current attribute */
+		Oid			typoutput;	/* output function */
+		bool		typisvarlena;
+		Datum		origval;	/* possibly toasted Datum */
+		bool		isnull;		/* column is null? */
+
+		attr = TupleDescAttr(tupdesc, natt);
+
+		/*
+		 * don't print dropped columns, we can't be sure everything is
+		 * available for them
+		 */
+		if (attr->attisdropped)
+			continue;
+
+		/*
+		 * Don't print system columns, oid will already have been printed if
+		 * present.
+		 */
+		if (attr->attnum < 0)
+			continue;
+
+		typid = attr->atttypid;
+
+		/* get Datum from tuple */
+		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
+
+		if (isnull && skip_nulls)
+			continue;
+
+		/* print attribute name */
+		appendStringInfoString(s, quote_identifier(NameStr(attr->attname)));
+
+		/* print attribute type */
+		appendStringInfoString(s, "<*>");
+		appendStringInfoString(s, format_type_be(typid));
+		appendStringInfoString(s, "<*>");
+
+		/* query output function */
+		getTypeOutputInfo(typid,
+						  &typoutput, &typisvarlena);
+
+		/* print data */
+		if (isnull)
+			appendStringInfoString(s, "null");
+		else if (typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval))
+			appendStringInfoString(s, "unchanged-toast-datum");
+		else if (!typisvarlena)
+			print_literal(s, typid,
+						  OidOutputFunctionCall(typoutput, origval));
+		else
+		{
+			Datum		val;	/* definitely detoasted Datum */
+
+			val = PointerGetDatum(PG_DETOAST_DATUM(origval));
+			print_literal(s, typid, OidOutputFunctionCall(typoutput, val));
+		}
+		appendStringInfoString(s, "<*>");
+	}
+}
+
+
+/* print the tuple 'tuple' into the StringInfo s */
+static void
 tuple_to_stringinfo(StringInfo s, TupleDesc tupdesc, HeapTuple tuple, bool skip_nulls)
 {
 	int			natt;
@@ -458,6 +530,45 @@ tuple_to_stringinfo(StringInfo s, TupleDesc tupdesc, HeapTuple tuple, bool skip_
 	}
 }
 
+
+static StringInfo get_delimited_data(Relation relation, ReorderBufferChange *change)
+{
+	StringInfo sendKafkaValue = makeStringInfo();
+	Form_pg_class class_form = RelationGetForm(relation);
+	TupleDesc tupdesc = RelationGetDescr(relation);
+	
+	// append scheme and table info
+	appendStringInfoString(sendKafkaValue,
+						   quote_qualified_identifier(
+													  get_namespace_name(
+																		 get_rel_namespace(RelationGetRelid(relation))),
+													  class_form->relrewrite ?
+													  get_rel_name(class_form->relrewrite) :
+													  NameStr(class_form->relname)));
+	appendStringInfoString(sendKafkaValue, "<*>");
+	// append action
+	if (change->action == REORDER_BUFFER_CHANGE_INSERT)
+	{
+		appendStringInfoString(sendKafkaValue, "insert<*>");
+	}
+	else if (change->action == REORDER_BUFFER_CHANGE_UPDATE)
+	{
+		appendStringInfoString(sendKafkaValue, "update<*>");
+	}
+	else if (change->action == REORDER_BUFFER_CHANGE_DELETE)
+	{
+		appendStringInfoString(sendKafkaValue, "delete<*>");
+	}
+	// append data
+	if (change->data.tp.newtuple == NULL)
+		appendStringInfoString(sendKafkaValue, " (no-tuple-data)");
+	else
+		tuple_to_kafka_value(sendKafkaValue, tupdesc,
+							&change->data.tp.newtuple->tuple,
+							false);
+	return sendKafkaValue;
+}
+
 /*
  * callback for individual changed tuples
  */
@@ -497,6 +608,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 													  NameStr(class_form->relname)));
 	appendStringInfoChar(ctx->out, ':');
 
+
 	switch (change->action)
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
@@ -507,8 +619,11 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				tuple_to_stringinfo(ctx->out, tupdesc,
 									&change->data.tp.newtuple->tuple,
 									false);
+
+			StringInfo sendKafkaValue = get_delimited_data(relation, change);
+
 			if (rd_kafka_produce(rkt, RD_KAFKA_PARTITION_UA, RD_KAFKA_MSG_F_COPY,
-				"data", 5, NULL, 0, NULL) == -1) {
+				sendKafkaValue->data, sendKafkaValue->len, NULL, 0, NULL) == -1) {
 				fprintf(stderr, "%% Failed to produce to topic %s: %s\n",
 				topic, rd_kafka_err2str(rd_kafka_errno2err(errno)));
 			}
