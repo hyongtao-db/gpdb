@@ -531,7 +531,7 @@ tuple_to_stringinfo(StringInfo s, TupleDesc tupdesc, HeapTuple tuple, bool skip_
 }
 
 
-static StringInfo get_delimited_data(Relation relation, ReorderBufferChange *change)
+static StringInfo get_delimited_data(Relation relation, ReorderBufferChange *change, ReorderBufferTXN *txn)
 {
 	StringInfo sendKafkaValue = makeStringInfo();
 	Form_pg_class class_form = RelationGetForm(relation);
@@ -546,6 +546,7 @@ static StringInfo get_delimited_data(Relation relation, ReorderBufferChange *cha
 													  get_rel_name(class_form->relrewrite) :
 													  NameStr(class_form->relname)));
 	appendStringInfoString(sendKafkaValue, "<*>");
+
 	// append action
 	if (change->action == REORDER_BUFFER_CHANGE_INSERT)
 	{
@@ -559,6 +560,10 @@ static StringInfo get_delimited_data(Relation relation, ReorderBufferChange *cha
 	{
 		appendStringInfoString(sendKafkaValue, "delete<*>");
 	}
+
+	appendStringInfo(sendKafkaValue, "%X", txn->final_lsn);
+	appendStringInfoString(sendKafkaValue, "<*>");
+
 	// append data
 	if (change->data.tp.newtuple == NULL)
 		appendStringInfoString(sendKafkaValue, " (no-tuple-data)");
@@ -620,7 +625,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 									&change->data.tp.newtuple->tuple,
 									false);
 
-			StringInfo sendKafkaValue = get_delimited_data(relation, change);
+			StringInfo sendKafkaValue = get_delimited_data(relation, change, txn);
 
 			if (rd_kafka_produce(rkt, RD_KAFKA_PARTITION_UA, RD_KAFKA_MSG_F_COPY,
 				sendKafkaValue->data, sendKafkaValue->len, NULL, 0, NULL) == -1) {
