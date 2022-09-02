@@ -496,6 +496,7 @@ AcceptResult(const PGresult *result)
 			case PGRES_EMPTY_QUERY:
 			case PGRES_COPY_IN:
 			case PGRES_COPY_OUT:
+			case PGRES_COPY_BOTH:
 				/* Fine, do nothing */
 				OK = true;
 				break;
@@ -1054,6 +1055,7 @@ ProcessResult(PGresult **results)
 
 			case PGRES_COPY_OUT:
 			case PGRES_COPY_IN:
+			case PGRES_COPY_BOTH:
 				is_copy = true;
 				break;
 
@@ -1265,6 +1267,7 @@ PrintQueryResults(PGresult *results)
 
 		case PGRES_COPY_OUT:
 		case PGRES_COPY_IN:
+		case PGRES_COPY_BOTH:
 			/* nothing to do here */
 			success = true;
 			break;
