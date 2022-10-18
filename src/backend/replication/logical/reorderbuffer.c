@@ -550,8 +550,8 @@ ReorderBufferTXNByXid(ReorderBuffer *rb, TransactionId xid, bool create,
 		ent->txn = ReorderBufferGetTXN(rb);
 		ent->txn->xid = xid;
 		txn = ent->txn;
-		txn->first_lsn = lsn;
-		txn->restart_decoding_lsn = rb->current_restart_decoding_lsn;
+		txn->first_lsn = lsn;//这里明显就是
+		txn->restart_decoding_lsn = rb->current_restart_decoding_lsn;//新加入了个事务
 
 		if (create_as_top)
 		{
@@ -1505,7 +1505,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 		else
 			StartTransactionCommand();
 
-		rb->begin(rb, txn);
+		rb->begin(rb, txn);//什么意思，我解析事务的commit回调的时候，才调用begin回调吗？
 
 		iterstate = ReorderBufferIterTXNInit(rb, txn);
 		while ((change = ReorderBufferIterTXNNext(rb, iterstate)) != NULL)

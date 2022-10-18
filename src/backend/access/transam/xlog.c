@@ -619,7 +619,7 @@ typedef struct XLogCtlInsert
 /*
  * Total shared-memory state for XLOG.
  */
-typedef struct XLogCtlData
+typedef struct XLogCtlData//这个东西，包含xact吗。。。
 {
 	XLogCtlInsert Insert;
 

@@ -304,7 +304,7 @@ BackgroundWriterMain(void)
 		 * Checkpointer, when active, is barely ever in its mainloop and thus
 		 * makes it hard to log regularly.
 		 */
-		if (XLogStandbyInfoActive() && !RecoveryInProgress())
+		if (XLogStandbyInfoActive() && !RecoveryInProgress())//所以这个设置是默认就有的吗？
 		{
 			TimestampTz timeout = 0;
 			TimestampTz now = GetCurrentTimestamp();
@@ -319,7 +319,7 @@ BackgroundWriterMain(void)
 			 * start of a record, whereas last_snapshot_lsn points just past
 			 * the end of the record.
 			 */
-			if (now >= timeout &&
+			if (now >= timeout &&//好的，定时写
 				last_snapshot_lsn <= GetLastImportantRecPtr())
 			{
 				last_snapshot_lsn = LogStandbySnapshot();

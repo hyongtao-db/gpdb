@@ -892,6 +892,9 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 	Datum		values[4];
 	bool		nulls[4];
 
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in CreateReplicationSlot:%d\n", getpid());
+
 	Assert(!MyReplicationSlot);
 
 	parseCreateReplSlotOptions(cmd, &reserve_wal, &snapshot_action);
@@ -918,7 +921,9 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 		 */
 		ReplicationSlotCreate(cmd->slotname, true,
 							  cmd->temporary ? RS_TEMPORARY : RS_EPHEMERAL);
+		fprintf(f, "CreateReplicationSlot,cmd->temporary:%d :%d\n",cmd->temporary, getpid());
 	}
+	fclose(f);
 
 	if (cmd->kind == REPLICATION_KIND_LOGICAL)
 	{
@@ -968,8 +973,8 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 			need_full_snapshot = true;
 		}
 
-		ctx = CreateInitDecodingContext(cmd->plugin, NIL, need_full_snapshot,
-										InvalidXLogRecPtr,
+		ctx = CreateInitDecodingContext(cmd->plugin, NIL, need_full_snapshot,//默认false
+										InvalidXLogRecPtr,//传空
 										logical_read_xlog_page,
 										WalSndPrepareWrite, WalSndWriteData,
 										WalSndUpdateProgress);
@@ -984,7 +989,9 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 		last_reply_timestamp = 0;
 
 		/* build initial snapshot, might take a while */
-		DecodingContextFindStartpoint(ctx);
+		//无非是个Create的场景。。。具体执行什么倒都无所谓
+		DecodingContextFindStartpoint(ctx);//ctx建完又删，其实就是为了这步
+		//你后来也设置了confirmed_flush，但没初始化？
 
 		/*
 		 * Export or use the snapshot if we've been asked to do so.
@@ -1005,7 +1012,7 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 		}
 
 		/* don't need the decoding context anymore */
-		FreeDecodingContext(ctx);
+		FreeDecodingContext(ctx);//这里是把reader也清理了吗
 
 		if (!cmd->temporary)
 			ReplicationSlotPersist();
@@ -1097,7 +1104,11 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 	/* make sure that our requirements are still fulfilled */
 	CheckLogicalDecodingRequirements();
 
-	Assert(!MyReplicationSlot);
+	Assert(!MyReplicationSlot);//但你这里不就是一个slot吗？虽然我确实可以不管其他的。
+
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in StartLogicalReplication:%d\n", getpid());
+	fclose(f);
 
 	ReplicationSlotAcquire(cmd->slotname, true);
 
@@ -1120,23 +1131,24 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 	 * Do this before sending a CopyBothResponse message, so that any errors
 	 * are reported early.
 	 */
-	logical_decoding_ctx =
-		CreateDecodingContext(cmd->startpoint, cmd->options, false,
+	logical_decoding_ctx =//理论上这里传的是默认值，我们可以设置，可惜断连的时候没法重新搞
+		CreateDecodingContext(cmd->startpoint, cmd->options, false,//所以说无论是create或是start，传进来的都是空值
 							  logical_read_xlog_page,
 							  WalSndPrepareWrite, WalSndWriteData,
 							  WalSndUpdateProgress);
+	//按说你不是要初始化一下reader吗，reader难道没有个起始lsn吗？
 
-
-	WalSndSetState(WALSNDSTATE_CATCHUP);
+	WalSndSetState(WALSNDSTATE_CATCHUP);//里边有个停止状态，看看怎么触发的
 
 	/* Send a CopyBothResponse message, and start streaming */
 	pq_beginmessage(&buf, 'W');
 	pq_sendbyte(&buf, 0);
 	pq_sendint16(&buf, 0);
 	pq_endmessage(&buf);
-	pq_flush();
+	pq_flush();//这看来是个回包
 
-
+	//你要是这么搞，我只能理解为从restart解析，但实际发出去是从confirmed
+	//但问题是你怎么控制的这么精准啊。。。你那个快照解析过程，就不可能超过confirm了？
 	/* Start reading WAL from the oldest required WAL. */
 	logical_startptr = MyReplicationSlot->data.restart_lsn;//要看这俩成员具体啥区别，需要
 
@@ -1144,10 +1156,12 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 	 * Report the location after which we'll send out further commits as the
 	 * current sentPtr.
 	 */
-	sentPtr = MyReplicationSlot->data.confirmed_flush;
+	//所以这个地方吧，你在重启之后，用的其实就是上次存的值
+	sentPtr = MyReplicationSlot->data.confirmed_flush;//那不就是上边的那个有用，你这里的赋值，啥用没有吗。。。
 
 	/* Also update the sent position status in shared memory */
 	SpinLockAcquire(&MyWalSnd->mutex);
+	//但看这个变量在其他地方没什么判断比较
 	MyWalSnd->sentPtr = MyReplicationSlot->data.restart_lsn;//看注释感觉这俩是一个意思啊
 	SpinLockRelease(&MyWalSnd->mutex);
 
@@ -1156,7 +1170,7 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 	SyncRepInitConfig();
 
 	/* Main loop of walsender */
-	WalSndLoop(XLogSendLogical);
+	WalSndLoop(XLogSendLogical);//你需要保证的是，这部分没有网络通信。。。
 
 	FreeDecodingContext(logical_decoding_ctx);
 	ReplicationSlotRelease();
@@ -1187,7 +1201,7 @@ WalSndPrepareWrite(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xi
 
 	resetStringInfo(ctx->out);
 
-	pq_sendbyte(ctx->out, 'w');
+	pq_sendbyte(ctx->out, 'w');//好的，准备的时候写的
 	pq_sendint64(ctx->out, lsn);	/* dataStart */
 	pq_sendint64(ctx->out, lsn);	/* walEnd */
 
@@ -1321,7 +1335,7 @@ WalSndUpdateProgress(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId 
  * we will return early, so caller must always check.
  */
 static XLogRecPtr
-WalSndWaitForWal(XLogRecPtr loc)
+WalSndWaitForWal(XLogRecPtr loc)//这个函数没见过，看起来挺重要
 {
 	int			wakeEvents;
 	static XLogRecPtr RecentFlushPtr = InvalidXLogRecPtr;
@@ -1392,7 +1406,7 @@ WalSndWaitForWal(XLogRecPtr loc)
 		 * possibly are waiting for a later location. So we send pings
 		 * containing the flush location every now and then.
 		 */
-		if (MyWalSnd->flush < sentPtr &&
+		if (MyWalSnd->flush < sentPtr &&//我不太清楚这个函数的含义，但这里似乎是你好久没给我确认了，我得跟你维持下
 			MyWalSnd->write < sentPtr &&
 			!waiting_for_ping_response)
 		{
@@ -1865,7 +1879,7 @@ ProcessStandbyReplyMessage(void)
 
 	/* Send a reply if the standby requested one. */
 	if (replyRequested)
-		WalSndKeepalive(false);
+		WalSndKeepalive(false);//你像这里跟网络相关，根本没法直接用
 
 	/*
 	 * Update shared state for this WalSender process based on reply data from
@@ -1875,16 +1889,16 @@ ProcessStandbyReplyMessage(void)
 		WalSnd	   *walsnd = MyWalSnd;
 
 		SpinLockAcquire(&walsnd->mutex);
-		walsnd->write = writePtr;
-		walsnd->flush = flushPtr;
-		walsnd->apply = applyPtr;
+		walsnd->write = writePtr;//代码里没啥用，看看文档咋说吧
+		walsnd->flush = flushPtr;//看了一圈总结这变量没啥用，就是有个超时比较的
+		walsnd->apply = applyPtr;//啥用没有，返回给用户看的
 		if (writeLag != -1 || clearLagTimes)
 			walsnd->writeLag = writeLag;
 		if (flushLag != -1 || clearLagTimes)
 			walsnd->flushLag = flushLag;
 		if (applyLag != -1 || clearLagTimes)
 			walsnd->applyLag = applyLag;
-		walsnd->replyTime = replyTime;
+		walsnd->replyTime = replyTime;//这两种回复，都会修改这个值
 		SpinLockRelease(&walsnd->mutex);
 	}
 
@@ -1893,7 +1907,7 @@ ProcessStandbyReplyMessage(void)
 	 * xlog seg files can be cleaned up-to this point
 	 * Refer to the description of xlogCleanUpTo
 	 */
-	WalSndSetXLogCleanUpTo(flushPtr);
+	WalSndSetXLogCleanUpTo(flushPtr);//所以这里就是影响cp的地方
 
 	if (!am_cascading_walsender)
 		SyncRepReleaseWaiters();
@@ -1901,6 +1915,7 @@ ProcessStandbyReplyMessage(void)
 	/*
 	 * Advance our local xmin horizon when the client confirmed a flush.
 	 */
+	//xmin我一直没咋看
 	if (MyReplicationSlot && flushPtr != InvalidXLogRecPtr)
 	{
 		if (SlotIsLogical(MyReplicationSlot))
@@ -2090,12 +2105,13 @@ ProcessStandbyHSFeedbackMessage(void)
 	 * If we're using a replication slot we reserve the xmin via that,
 	 * otherwise via the walsender's PGXACT entry. We can only track the
 	 * catalog xmin separately when using a slot, so we store the least of the
-	 * two provided when not using a slot.
+	 * two provided when not using a slot.//这里似乎是为了卡住不让删除相关信息
 	 *
 	 * XXX: It might make sense to generalize the ephemeral slot concept and
 	 * always use the slot mechanism to handle the feedback xmin.
 	 */
 	if (MyReplicationSlot != NULL)	/* XXX: persistency configurable? */
+		//这个难道会不赋值吗？而且这咋是物理slot？
 		PhysicalReplicationSlotNewXmin(feedbackXmin, feedbackCatalogXmin);
 	else
 	{
@@ -2332,7 +2348,7 @@ WalSndLoop(WalSndSendDataCallback send_data)
 }
 
 /* Initialize a per-walsender data structure for this walsender process */
-static void
+static void//你一个进程还能有几个walsender啊。。。
 InitWalSenderSlot(void)
 {
 	int			i;
@@ -2928,6 +2944,10 @@ XLogSendLogical(void)
 	XLogRecord *record;
 	char	   *errm;
 
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in XLogSendLogical:%d\n", getpid());
+	
+
 	/*
 	 * Don't know whether we've caught up yet. We'll set WalSndCaughtUp to
 	 * true in WalSndWaitForWal, if we're actually waiting. We also set to
@@ -2936,14 +2956,16 @@ XLogSendLogical(void)
 	 */
 	WalSndCaughtUp = false;
 
-	record = XLogReadRecord(logical_decoding_ctx->reader, logical_startptr, &errm);
-	logical_startptr = InvalidXLogRecPtr;
+	//这不就是吗，这还有这个啊，跟get一样的
+	//回头看下这个reader怎么初始化的
+	record = XLogReadRecord(logical_decoding_ctx->reader, logical_startptr, &errm);//所以这里不就是start_lsn吗。。。
+	logical_startptr = InvalidXLogRecPtr;//OK，读过一次，之后就一步接一步走
 
 	/* xlog record was invalid */
 	if (errm != NULL)
 		elog(ERROR, "%s", errm);
 
-	if (record != NULL)
+	if (record != NULL)//但这个record，后边并没有被使用到啊？
 	{
 		/* XXX: Note that logical decoding cannot be used while in recovery */
 		XLogRecPtr	flushPtr = GetFlushRecPtr();
@@ -2955,14 +2977,14 @@ XLogSendLogical(void)
 		 */
 		LogicalDecodingProcessRecord(logical_decoding_ctx, logical_decoding_ctx->reader);
 
-		sentPtr = logical_decoding_ctx->reader->EndRecPtr;
+		sentPtr = logical_decoding_ctx->reader->EndRecPtr;//但是这个恐怕不会跟confirmed_flush对齐啊
 
 		/*
 		 * If we have sent a record that is at or beyond the flushed point, we
 		 * have caught up.
 		 */
 		if (sentPtr >= flushPtr)
-			WalSndCaughtUp = true;
+			WalSndCaughtUp = true;//这里表示的应该是说我是否赶上整个WAL的进度
 	}
 	else
 	{
@@ -2988,9 +3010,11 @@ XLogSendLogical(void)
 		WalSnd	   *walsnd = MyWalSnd;
 
 		SpinLockAcquire(&walsnd->mutex);
-		walsnd->sentPtr = sentPtr;
+		walsnd->sentPtr = sentPtr;//之前就是看到这里，没持久化。。。就是说，它在发过至少一条消息之后，两边就同步了
 		SpinLockRelease(&walsnd->mutex);
 	}
+	fprintf(f, "XLogSendLogical walsnd->sentPtr:%X, :%d\n", MyWalSnd->sentPtr, getpid());
+	fclose(f);
 }
 
 /*

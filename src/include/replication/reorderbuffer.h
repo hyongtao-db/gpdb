@@ -196,7 +196,7 @@ typedef struct ReorderBufferTXN
 	 * restart decoding from there and fully recover this transaction from
 	 * WAL.
 	 */
-	XLogRecPtr	restart_decoding_lsn;
+	XLogRecPtr	restart_decoding_lsn;//注释说的太好了，这句话值1000块钱
 
 	/* origin of the change that caused this transaction */
 	RepOriginId origin_id;
@@ -343,7 +343,7 @@ struct ReorderBuffer
 	 * Transactions that could be a toplevel xact, ordered by LSN of the first
 	 * record bearing that xid.
 	 */
-	dlist_head	toplevel_by_lsn;
+	dlist_head	toplevel_by_lsn;//暂时理解为全部事务列表吧
 
 	/*
 	 * Transactions and subtransactions that have a base snapshot, ordered by

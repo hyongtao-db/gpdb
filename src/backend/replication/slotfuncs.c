@@ -150,6 +150,7 @@ create_logical_replication_slot(char *name, char *plugin,
 	/*
 	 * Create logical decoding context, to build the initial snapshot.
 	 */
+	//你这里是创建了一个，walsender那里也创建了，然后get那里也创建了？
 	ctx = CreateInitDecodingContext(plugin, NIL,
 									false,	/* do not build snapshot */
 									restart_lsn,
@@ -157,7 +158,7 @@ create_logical_replication_slot(char *name, char *plugin,
 									NULL);
 
 	/* build initial snapshot, might take a while */
-	DecodingContextFindStartpoint(ctx);
+	DecodingContextFindStartpoint(ctx);//跟get类似也就是个临时结构，不是伴随着decode一直有的
 
 	/* don't need the decoding context anymore */
 	FreeDecodingContext(ctx);
@@ -513,7 +514,7 @@ pg_logical_replication_slot_advance(XLogRecPtr moveto)
 /*
  * SQL function for moving the position in a replication slot.
  */
-Datum
+Datum//这个函数也可以看看，加深下理解
 pg_replication_slot_advance(PG_FUNCTION_ARGS)
 {
 	Name		slotname = PG_GETARG_NAME(0);

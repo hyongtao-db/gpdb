@@ -758,7 +758,7 @@ StreamConnection(pgsocket server_fd, Port *port)
 {
 	/* accept connection and fill in the client (remote) address */
 	port->raddr.salen = sizeof(port->raddr.addr);
-	if ((port->sock = accept(server_fd,
+	if ((port->sock = accept(server_fd,//好的，port指的就是连接。
 							 (struct sockaddr *) &port->raddr.addr,
 							 &port->raddr.salen)) == PGINVALID_SOCKET)
 	{
@@ -899,6 +899,7 @@ StreamConnection(pgsocket server_fd, Port *port)
  * still has the socket open.  So, we only want to close the descriptor,
  * we do NOT want to send anything to the far end.
  */
+//你是怎么把连接的归属给子进程的？
 void
 StreamClose(pgsocket sock)
 {

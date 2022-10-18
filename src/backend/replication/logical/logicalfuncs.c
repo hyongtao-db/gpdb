@@ -123,7 +123,7 @@ logical_read_local_xlog_page(XLogReaderState *state, XLogRecPtr targetPagePtr,
 /*
  * Helper function for the various SQL callable logical decoding functions.
  */
-static Datum
+static Datum//这里必定是从上一个lsn出发，到达当前的lsn。
 pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool binary)//看看2参怎么确认的读日志进度？
 {
 	Name		name;
@@ -141,6 +141,10 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 	List	   *options = NIL;
 	DecodingOutputState *p;
 
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in pg_logical_slot_get_changes_guts:%d\n", getpid());
+	fclose(f);
+
 	check_permissions();
 
 	CheckLogicalDecodingRequirements();
@@ -154,7 +158,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 	if (PG_ARGISNULL(1))
 		upto_lsn = InvalidXLogRecPtr;
 	else
-		upto_lsn = PG_GETARG_LSN(1);
+		upto_lsn = PG_GETARG_LSN(1);//这里看来是设置进度
 
 	if (PG_ARGISNULL(2))
 		upto_nchanges = InvalidXLogRecPtr;
@@ -237,8 +241,8 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 	 * Compute the current end-of-wal and maintain ThisTimeLineID.
 	 * RecoveryInProgress() will update ThisTimeLineID on promotion.
 	 */
-	if (!RecoveryInProgress())
-		end_of_wal = GetFlushRecPtr();
+	if (!RecoveryInProgress())//好的，看下恢复流程吧
+		end_of_wal = GetFlushRecPtr();//没有，这个是整体的，跟我们没啥关系
 	else
 		end_of_wal = GetXLogReplayRecPtr(&ThisTimeLineID);
 
@@ -275,7 +279,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 		 * xacts that committed after the slot's confirmed_flush can be
 		 * accumulated into reorder buffers.
 		 */
-		startptr = MyReplicationSlot->data.restart_lsn;
+		startptr = MyReplicationSlot->data.restart_lsn;//愁人。。。
 
 		/* invalidate non-timetravel entries */
 		InvalidateSystemCaches();
@@ -287,6 +291,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 			XLogRecord *record;
 			char	   *errm = NULL;
 
+			//我似乎有点弄混了，你这里是谁又读了一遍呢？不是已经从wal解析过一遍了吗？
 			record = XLogReadRecord(ctx->reader, startptr, &errm);//这里会做递增吗？
 			if (errm)
 				elog(ERROR, "%s", errm);
@@ -295,6 +300,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 			 * Now that we've set up the xlog reader state, subsequent calls
 			 * pass InvalidXLogRecPtr to say "continue from last record"
 			 */
+			//啥意思啊，你这下次循环不就做判断了吗。。。
 			startptr = InvalidXLogRecPtr;
 
 			/*
@@ -306,7 +312,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 
 			/* check limits */
 			if (upto_lsn != InvalidXLogRecPtr &&
-				upto_lsn <= ctx->reader->EndRecPtr)
+				upto_lsn <= ctx->reader->EndRecPtr)//如果这里是end+1的话，那upto也是超过end的，是个后边界？
 				break;
 			if (upto_nchanges != 0 &&
 				upto_nchanges <= p->returned_rows)
@@ -327,8 +333,12 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 		 * Next time, start where we left off. (Hunting things, the family
 		 * business..)
 		 */
-		if (ctx->reader->EndRecPtr != InvalidXLogRecPtr && confirm)
+		//前边的这个条件是怎么控制的？
+		if (ctx->reader->EndRecPtr != InvalidXLogRecPtr && confirm)//关键
 		{
+			FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+			fprintf(f, "in pg_logical_slot_get_changes_guts, before LogicalConfirmReceivedLocation:%d\n", getpid());
+			fclose(f);
 			LogicalConfirmReceivedLocation(ctx->reader->EndRecPtr);
 
 			/*
@@ -348,7 +358,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 		}
 
 		/* free context, call shutdown callback */
-		FreeDecodingContext(ctx);
+		FreeDecodingContext(ctx);//好不容易创建完，再回收掉？
 
 		ReplicationSlotRelease();
 		InvalidateSystemCaches();

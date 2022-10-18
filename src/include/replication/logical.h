@@ -41,7 +41,7 @@ typedef struct LogicalDecodingContext
 	ReplicationSlot *slot;
 
 	/* infrastructure pieces for decoding */
-	XLogReaderState *reader;
+	XLogReaderState *reader;//这就是reader了？
 	struct ReorderBuffer *reorder;
 	struct SnapBuild *snapshot_builder;
 

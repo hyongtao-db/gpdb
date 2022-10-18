@@ -24,6 +24,7 @@
 #include "catalog/pg_control.h"
 #include "common/pg_lzcompress.h"
 #include "replication/origin.h"
+#include "unistd.h"
 
 #ifdef USE_ZSTD
 /* Zstandard library is provided */
@@ -73,8 +74,8 @@ report_invalid_record(XLogReaderState *state, const char *fmt,...)
  *
  * Returns NULL if the xlogreader couldn't be allocated.
  */
-XLogReaderState *
-XLogReaderAllocate(int wal_segment_size, XLogPageReadCB pagereadfunc,
+XLogReaderState *//看下起始lsn咋确定的。。。答案就是没设置
+XLogReaderAllocate(int wal_segment_size, XLogPageReadCB pagereadfunc,//妈啊，实际读取函数。。。
 				   void *private_data)
 {
 	XLogReaderState *state;
@@ -208,7 +209,7 @@ allocate_recordbuf(XLogReaderState *state, uint32 reclength)
  * Attempt to read an XLOG record.
  *
  * If RecPtr is valid, try to read a record at that position.  Otherwise
- * try to read a record just after the last one previously read.
+ * try to read a record just after the last one previously read.//这里说了，可以读之前读过的下一个
  *
  * If the read_page callback fails to read the requested data, NULL is
  * returned.  The callback is expected to have reported the error; errormsg
@@ -220,7 +221,7 @@ allocate_recordbuf(XLogReaderState *state, uint32 reclength)
  * The returned pointer (or *errormsg) points to an internal buffer that's
  * valid until the next call to XLogReadRecord.
  */
-XLogRecord *
+XLogRecord *//为什么外边实际没有用这个返回呢？
 XLogReadRecord(XLogReaderState *state, XLogRecPtr RecPtr, char **errormsg)
 {
 	XLogRecord *record;
@@ -252,7 +253,7 @@ XLogReadRecord(XLogReaderState *state, XLogRecPtr RecPtr, char **errormsg)
 	if (RecPtr == InvalidXLogRecPtr)
 	{
 		/* No explicit start point; read the record after the one we just read */
-		RecPtr = state->EndRecPtr;
+		RecPtr = state->EndRecPtr;//所以你上一条的结束，就一定是下一条的开始？
 
 		if (state->ReadRecPtr == InvalidXLogRecPtr)
 			randAccess = true;
@@ -275,6 +276,9 @@ XLogReadRecord(XLogReaderState *state, XLogRecPtr RecPtr, char **errormsg)
 		Assert(XRecOffIsValid(RecPtr));
 		randAccess = true;
 	}
+
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "XLogReadRecord RecPtr:%X:%d\n", RecPtr, getpid());
 
 restart:
 	state->currRecPtr = RecPtr;
@@ -334,7 +338,7 @@ restart:
 	 * cannot access any other fields until we've verified that we got the
 	 * whole header.
 	 */
-	record = (XLogRecord *) (state->readBuf + RecPtr % XLOG_BLCKSZ);
+	record = (XLogRecord *) (state->readBuf + RecPtr % XLOG_BLCKSZ);//这是已经读到buf里变成结构体了
 	total_len = record->xl_tot_len;
 
 	/*
@@ -508,7 +512,7 @@ restart:
 		if (!ValidXLogRecord(state, record, RecPtr))
 			goto err;
 
-		state->EndRecPtr = RecPtr + MAXALIGN(total_len);
+		state->EndRecPtr = RecPtr + MAXALIGN(total_len);//他这个+1怎么理解啊。。。
 
 		state->ReadRecPtr = RecPtr;
 	}
@@ -524,10 +528,13 @@ restart:
 		state->EndRecPtr -= XLogSegmentOffset(state->EndRecPtr, state->wal_segment_size);
 	}
 
-	if (DecodeXLogRecord(state, record, errormsg))
+	if (DecodeXLogRecord(state, record, errormsg))//所以这里才是最重要的，把record内容搞到state里
 		return record;
 	else
 		return NULL;
+
+	fprintf(f, "XLogReadRecord EndRecPtr:%X:%d\n", state->EndRecPtr, getpid());
+	fclose(f);
 
 err:
 	if (assembled)
