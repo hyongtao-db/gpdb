@@ -196,7 +196,7 @@ typedef struct ReorderBufferTXN
 	 * restart decoding from there and fully recover this transaction from
 	 * WAL.
 	 */
-	XLogRecPtr	restart_decoding_lsn;//注释说的太好了，这句话值1000块钱
+	XLogRecPtr	restart_decoding_lsn;
 
 	/* origin of the change that caused this transaction */
 	RepOriginId origin_id;

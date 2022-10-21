@@ -45,7 +45,6 @@
 #include "replication/snapbuild.h"
 
 #include "storage/standby.h"
-#include "unistd.h"
 
 typedef struct XLogRecordBuffer
 {
@@ -114,7 +113,7 @@ LogicalDecodingProcessRecord(LogicalDecodingContext *ctx, XLogReaderState *recor
 			 * Rmgrs we care about for logical decoding. Add new rmgrs in
 			 * rmgrlist.h's order.
 			 */
-		case RM_XLOG_ID://我倒对这个产生疑问了，这个真的是事务语句吗？
+		case RM_XLOG_ID:
 			DecodeXLogOp(ctx, &buf);
 			break;
 
@@ -187,10 +186,6 @@ DecodeXLogOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	SnapBuild  *builder = ctx->snapshot_builder;
 	uint8		info = XLogRecGetInfo(buf->record) & ~XLR_INFO_MASK;
 
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "DecodeXLogOp: buf->origptr:%X, %d\n", buf->origptr, getpid());
-	fclose(f);
-
 	ReorderBufferProcessXid(ctx->reorder, XLogRecGetXid(buf->record),
 							buf->origptr);
 
@@ -229,12 +224,12 @@ DecodeXLogOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 /*
  * Handle rmgr XACT_ID records for DecodeRecordIntoReorderBuffer().
  */
-static void//这个buf，是不是已经是半解析出来的东西了？
+static void
 DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 {
 	SnapBuild  *builder = ctx->snapshot_builder;
 	ReorderBuffer *reorder = ctx->reorder;
-	XLogReaderState *r = buf->record;//好的，这里的细节我就先不管了
+	XLogReaderState *r = buf->record;
 	uint8		info = XLogRecGetInfo(r) & XLOG_XACT_OPMASK;
 
 	/*
@@ -243,18 +238,13 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	 * assignment case there'll not be any later records with the same xid;
 	 * and in the assignment case we'll not decode those xacts.
 	 */
-	//这里是真凶残啊。。。
 	if (SnapBuildCurrentState(builder) < SNAPBUILD_FULL_SNAPSHOT)
 		return;
 
 	switch (info)
 	{
 		case XLOG_XACT_COMMIT:
-		case XLOG_XACT_COMMIT_PREPARED://打日志确认下，这个在分布式情况下，只会出现XLOG_XACT_COMMIT_PREPARED对吧？
-			{
-				FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-				fprintf(f, "%d:decode commit act case: %d\n", getpid(), info);
-
+		case XLOG_XACT_COMMIT_PREPARED:
 				xl_xact_commit *xlrec;
 				xl_xact_parsed_commit parsed;
 				TransactionId xid;
@@ -262,38 +252,25 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 				xlrec = (xl_xact_commit *) XLogRecGetData(r);
 				ParseCommitRecord(XLogRecGetInfo(buf->record), xlrec, &parsed);
 
-				if (!TransactionIdIsValid(parsed.twophase_xid))//这两种情况，是不是都是分布式事务，只是有一个
+				if (!TransactionIdIsValid(parsed.twophase_xid))
 				{
-					fprintf(f, "DecodeXactOp: gxid case1, %d\n", getpid());
 					xid = XLogRecGetXid(r);
 				}
 				else
 				{
-					fprintf(f, "DecodeXactOp: gxid case2, %d\n", getpid());
 					xid = parsed.twophase_xid;
 				}
-					
-				fprintf(f, "DecodeXactOp: one_phase:%d, %d\n", parsed.is_one_phase, getpid());
-				fprintf(f, "DecodeXactOp: distribXid:%d, %d\n", parsed.distribXid, getpid());
-				fclose(f);
 
-				DecodeCommit(ctx, buf, &parsed, xid);//虽然把两种情况揉一起了，但暂时看对我没有什么影响
+				DecodeCommit(ctx, buf, &parsed, xid);
 				break;
 			}
 		case XLOG_XACT_DISTRIBUTED_COMMIT:
 			{
 				//do nothing
-				FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-				fprintf(f, "%d:decode distributed commit, do nothing\n", getpid());
-				fclose(f);
 				break;
 			}
 		case XLOG_XACT_DISTRIBUTED_FORGET:
 			{
-				FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-				fprintf(f, "%d:decode distributed forget\n", getpid());
-				fclose(f);
-
 				xl_xact_distributed_forget *xlrec;
 				xl_xact_parsed_distributed_forget parsed;
 				DistributedTransactionId gid;
@@ -305,11 +282,7 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 				gid = parsed.gxid;
 				cnt_segments = parsed.cnt_segments;
 
-				f = fopen("/home/gpadmin/wangchonglog", "a");
-				fprintf(f, "%d:decode distributed transaction id:%ld\n", getpid(), gid);
-				fclose(f);
-
-				DecodeDistributedForget(ctx, buf, &parsed, gid, cnt_segments);//这个会难一些啊
+				DecodeDistributedForget(ctx, buf, &parsed, gid, cnt_segments);
 				break;
 			}
 		case XLOG_XACT_ABORT:
@@ -373,10 +346,6 @@ DecodeStandbyOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	SnapBuild  *builder = ctx->snapshot_builder;
 	XLogReaderState *r = buf->record;
 	uint8		info = XLogRecGetInfo(r) & ~XLR_INFO_MASK;
-
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "DecodeStandbyOp:%d\n", getpid());
-	fclose(f);
 
 	ReorderBufferProcessXid(ctx->reorder, XLogRecGetXid(r), buf->origptr);
 
@@ -636,9 +605,6 @@ DecodeCommit(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 	RepOriginId origin_id = XLogRecGetOrigin(buf->record);
 	int			i;
 
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "DecodeCommit: step into, %d\n", getpid());
-
 	if (parsed->xinfo & XACT_XINFO_HAS_ORIGIN)
 	{
 		origin_lsn = parsed->origin_lsn;
@@ -658,7 +624,6 @@ DecodeCommit(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 		ReorderBufferXidSetCatalogChanges(ctx->reorder, xid, buf->origptr);
 	}
 
-	//好的，这里应该就是修改快照的地方，就是说后边虽然可能因为commitTs较小而返回，但对快照的修改还是有效的。
 	SnapBuildCommitTxn(ctx->snapshot_builder, buf->origptr, xid,
 					   parsed->nsubxacts, parsed->subxacts);
 
@@ -688,13 +653,10 @@ DecodeCommit(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 	 * relevant syscaches.
 	 * ---
 	 */
-	//小于快照的开始解码，就不要了，后边的是记录的开始lsn，这里只有commit会被调，所以指的就是commit lsn！！！
-	//这个判断是合理的，毕竟之前的commit，肯定都消费过了。
-	//这是一条回闭机制，还有其他的吗？
 	if (SnapBuildXactNeedsSkip(ctx->snapshot_builder, buf->origptr) ||
 		(parsed->dbId != InvalidOid && parsed->dbId != ctx->slot->data.database) ||
 		ctx->fast_forward || FilterByOrigin(ctx, origin_id))
-	{//下边是清理。。。
+	{
 		for (i = 0; i < parsed->nsubxacts; i++)
 		{
 			ReorderBufferForget(ctx->reorder, parsed->subxacts[i], buf->origptr);
@@ -710,10 +672,6 @@ DecodeCommit(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 		ReorderBufferCommitChild(ctx->reorder, xid, parsed->subxacts[i],
 								 buf->origptr, buf->endptr);
 	}
-
-	fprintf(f, "DecodeCommit: one_phase:%d, %d\n", parsed->is_one_phase, getpid());
-	fprintf(f, "DecodeCommit: distribXid:%d, %d\n", parsed->distribXid, getpid());
-	fclose(f);
 
 	/* replay actions of all transaction + subtransactions in order */
 	ReorderBufferCommit(ctx->reorder, xid, buf->origptr, buf->endptr,

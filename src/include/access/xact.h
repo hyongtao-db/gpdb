@@ -354,9 +354,9 @@ typedef struct xl_xact_parsed_commit
 	XLogRecPtr	origin_lsn;
 	TimestampTz origin_timestamp;
 
-	DistributedTransactionId        distribXid;//所以这里跟上边的那个两阶段是不一样的是吗？正好一个demo把这俩问题都解决了吧。
+	DistributedTransactionId        distribXid;
 
-	bool is_one_phase;//注意下初始化清把内存清0吧
+	bool is_one_phase;
 } xl_xact_parsed_commit;
 
 typedef xl_xact_parsed_commit xl_xact_parsed_prepare;

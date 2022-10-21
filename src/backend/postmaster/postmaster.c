@@ -1906,7 +1906,7 @@ ServerLoop(void)
 
 			PG_SETMASK(&UnBlockSig);
 
-			selres = select(nSockets, &rmask, NULL, NULL, &timeout);//竟然不是epoll，看来是来的少
+			selres = select(nSockets, &rmask, NULL, NULL, &timeout);
 
 			PG_SETMASK(&BlockSig);
 		}
@@ -1958,7 +1958,7 @@ ServerLoop(void)
 				{
 					Port	   *port;
 
-					port = ConnCreate(ListenSocket[i]);//这里是创建连接吗？
+					port = ConnCreate(ListenSocket[i]);
 					if (port)
 					{
 						BackendStartup(port);
@@ -4564,7 +4564,7 @@ TerminateChildren(int signal)
  * Note: if you change this code, also consider StartAutovacuumWorker.
  */
 static int
-BackendStartup(Port *port)//可能是这里，启动了WAL sender进程
+BackendStartup(Port *port)
 {
 	Backend    *bn;				/* for backend cleanup */
 	pid_t		pid;
@@ -4618,7 +4618,7 @@ BackendStartup(Port *port)//可能是这里，启动了WAL sender进程
 #ifdef EXEC_BACKEND
 	pid = backend_forkexec(port);
 #else							/* !EXEC_BACKEND */
-	pid = fork_process();//估计是在这里创建的WAL sender进程
+	pid = fork_process();
 	if (pid == 0)				/* child */
 	{
 		free(bn);
@@ -4630,7 +4630,7 @@ BackendStartup(Port *port)//可能是这里，启动了WAL sender进程
 		ClosePostmasterPorts(false);
 
 		/* Perform additional initialization and collect startup packet */
-		BackendInitialize(port);//共享同一连接，谁读算谁的
+		BackendInitialize(port);
 
 		/* And run the backend */
 		BackendRun(port);
@@ -4847,7 +4847,7 @@ BackendInitialize(Port *port)
 	 * Receive the startup packet (which might turn out to be a cancel request
 	 * packet).
 	 */
-	status = ProcessStartupPacket(port, false);//这里是处理第一个包吗？
+	status = ProcessStartupPacket(port, false);
 
 	/*
 	 * Stop here if it was bad or a cancel packet.  ProcessStartupPacket

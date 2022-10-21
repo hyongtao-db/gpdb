@@ -145,12 +145,11 @@ create_logical_replication_slot(char *name, char *plugin,
 	 * error as well.
 	 */
 	ReplicationSlotCreate(name, true,
-						  temporary ? RS_TEMPORARY : RS_EPHEMERAL);//这个默认传的是false吧？
+						  temporary ? RS_TEMPORARY : RS_EPHEMERAL);
 
 	/*
 	 * Create logical decoding context, to build the initial snapshot.
 	 */
-	//你这里是创建了一个，walsender那里也创建了，然后get那里也创建了？
 	ctx = CreateInitDecodingContext(plugin, NIL,
 									false,	/* do not build snapshot */
 									restart_lsn,
@@ -158,7 +157,7 @@ create_logical_replication_slot(char *name, char *plugin,
 									NULL);
 
 	/* build initial snapshot, might take a while */
-	DecodingContextFindStartpoint(ctx);//跟get类似也就是个临时结构，不是伴随着decode一直有的
+	DecodingContextFindStartpoint(ctx);
 
 	/* don't need the decoding context anymore */
 	FreeDecodingContext(ctx);
@@ -192,7 +191,7 @@ pg_create_logical_replication_slot(PG_FUNCTION_ARGS)
 									InvalidXLogRecPtr);
 
 	values[0] = NameGetDatum(&MyReplicationSlot->data.name);
-	values[1] = LSNGetDatum(MyReplicationSlot->data.confirmed_flush);//你从这里看，其实就是你在psql执行玩函数之后，他所显示的内容。
+	values[1] = LSNGetDatum(MyReplicationSlot->data.confirmed_flush);
 
 	memset(nulls, 0, sizeof(nulls));
 
@@ -397,7 +396,7 @@ pg_physical_replication_slot_advance(XLogRecPtr moveto)
  * WAL and removal of old catalog tuples.  As decoding is done in fast_forward
  * mode, no changes are generated anyway.
  */
-static XLogRecPtr//help函数，这是我们可以用的吗？还是得找逻辑复制链条看看
+static XLogRecPtr
 pg_logical_replication_slot_advance(XLogRecPtr moveto)
 {
 	LogicalDecodingContext *ctx;
@@ -514,7 +513,7 @@ pg_logical_replication_slot_advance(XLogRecPtr moveto)
 /*
  * SQL function for moving the position in a replication slot.
  */
-Datum//这个函数也可以看看，加深下理解
+Datum
 pg_replication_slot_advance(PG_FUNCTION_ARGS)
 {
 	Name		slotname = PG_GETARG_NAME(0);

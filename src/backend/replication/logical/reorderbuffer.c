@@ -550,8 +550,8 @@ ReorderBufferTXNByXid(ReorderBuffer *rb, TransactionId xid, bool create,
 		ent->txn = ReorderBufferGetTXN(rb);
 		ent->txn->xid = xid;
 		txn = ent->txn;
-		txn->first_lsn = lsn;//这里明显就是
-		txn->restart_decoding_lsn = rb->current_restart_decoding_lsn;//新加入了个事务
+		txn->first_lsn = lsn;
+		txn->restart_decoding_lsn = rb->current_restart_decoding_lsn;
 
 		if (create_as_top)
 		{
@@ -1476,10 +1476,6 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 	/* setup the initial snapshot */
 	SetupHistoricSnapshot(snapshot_now, txn->tuplecid_hash);
 
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "ReorderBufferCommit: txn->one_phase:%d, %d\n", is_one_phase, getpid());
-	fprintf(f, "ReorderBufferCommit: txn->gxid:%d, %d\n", gxid, getpid());
-	fclose(f);
 	txn->gxid = gxid;
 	txn->is_one_phase = is_one_phase;
 
@@ -1505,7 +1501,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 		else
 			StartTransactionCommand();
 
-		rb->begin(rb, txn);//什么意思，我解析事务的commit回调的时候，才调用begin回调吗？
+		rb->begin(rb, txn);
 
 		iterstate = ReorderBufferIterTXNInit(rb, txn);
 		while ((change = ReorderBufferIterTXNNext(rb, iterstate)) != NULL)
@@ -1849,9 +1845,6 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 
 void
 ReorderBufferDistributedForget(ReorderBuffer *rb, DistributedTransactionId gxid, int cnt_segments) {
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "%d:record buffer:%ld\n", getpid(), gxid);
-	fclose(f);
 	rb->distributed_forget(rb, gxid, cnt_segments);
 }
 

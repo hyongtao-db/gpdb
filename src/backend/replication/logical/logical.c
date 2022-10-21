@@ -43,7 +43,6 @@
 #include "storage/procarray.h"
 
 #include "utils/memutils.h"
-#include "unistd.h"
 
 /* data for errcontext callback */
 typedef struct LogicalErrorCallbackState
@@ -120,9 +119,9 @@ CheckLogicalDecodingRequirements(void)
  * Helper function for CreateInitDecodingContext() and
  * CreateDecodingContext() performing common tasks.
  */
-static LogicalDecodingContext *//别把跟slot的初始化弄混了
+static LogicalDecodingContext *
 StartupDecodingContext(List *output_plugin_options,
-					   XLogRecPtr start_lsn,//好像并没有卵用。。。传进来confirmed_flush，但只是作为快照的入参
+					   XLogRecPtr start_lsn,
 					   TransactionId xmin_horizon,
 					   bool need_full_snapshot,
 					   bool fast_forward,
@@ -151,7 +150,7 @@ StartupDecodingContext(List *output_plugin_options,
 	 * (re-)load output plugins, so we detect a bad (removed) output plugin
 	 * now.
 	 */
-	if (!fast_forward)//在这里呢。。。记下吧
+	if (!fast_forward)
 		LoadOutputPlugin(&ctx->callbacks, NameStr(slot->data.plugin));
 
 	/*
@@ -173,9 +172,9 @@ StartupDecodingContext(List *output_plugin_options,
 		LWLockRelease(ProcArrayLock);
 	}
 
-	ctx->slot = slot;//关联
+	ctx->slot = slot;
 
-	ctx->reader = XLogReaderAllocate(wal_segment_size, read_page, ctx);//没跟起始lsn相关
+	ctx->reader = XLogReaderAllocate(wal_segment_size, read_page, ctx);
 	if (!ctx->reader)
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
@@ -183,7 +182,7 @@ StartupDecodingContext(List *output_plugin_options,
 
 	ctx->reorder = ReorderBufferAllocate();
 	ctx->snapshot_builder =
-		AllocateSnapshotBuilder(ctx->reorder, xmin_horizon, start_lsn,//啥也没干，就赋了个值
+		AllocateSnapshotBuilder(ctx->reorder, xmin_horizon, start_lsn,
 								need_full_snapshot);
 
 	ctx->reorder->private_data = ctx;
@@ -220,7 +219,7 @@ StartupDecodingContext(List *output_plugin_options,
  *		mark WAL as reserved by setting a convenient restart_lsn for the slot.
  *		Otherwise, we set for decoding to start from the given LSN without
  *		marking WAL reserved beforehand.  In that scenario, it's up to the
- *		caller to guarantee that WAL remains available.//这里的意思是说，如果传空，函数会找个合适的值，保留一定的WAL；否则从传过来的值开始解析
+ *		caller to guarantee that WAL remains available.
  * read_page, prepare_write, do_write, update_progress --
  *		callbacks that perform the use-case dependent, actual, work.
  *
@@ -229,7 +228,7 @@ StartupDecodingContext(List *output_plugin_options,
  * inside it.
  *
  * Returns an initialized decoding context after calling the output plugin's
- * startup function.//最后这句话什么意思，跟插件的初始化有什么关系？
+ * startup function.
  */
 LogicalDecodingContext *
 CreateInitDecodingContext(char *plugin,
@@ -247,7 +246,7 @@ CreateInitDecodingContext(char *plugin,
 	MemoryContext old_context;
 
 	/* shorter lines... */
-	slot = MyReplicationSlot;//一个进程就这一个了？如果我们只使用一个slot的话倒没啥影响
+	slot = MyReplicationSlot;
 
 	/* first some sanity checks that are unlikely to be violated */
 	if (slot == NULL)
@@ -280,11 +279,11 @@ CreateInitDecodingContext(char *plugin,
 	SpinLockRelease(&slot->mutex);
 
 	if (XLogRecPtrIsInvalid(restart_lsn))
-		ReplicationSlotReserveWal();//因为是create，这里其实是无所谓了
+		ReplicationSlotReserveWal();
 	else
 	{
 		SpinLockAcquire(&slot->mutex);
-		slot->data.restart_lsn = restart_lsn;//我刚才在哪看到个反向赋值的动作，得从头再捋遍代码了。。。
+		slot->data.restart_lsn = restart_lsn;
 		SpinLockRelease(&slot->mutex);
 	}
 
@@ -314,7 +313,6 @@ CreateInitDecodingContext(char *plugin,
 	 * ----
 	 */
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-	//这里倒是挺直接，一下算出来的了
 	xmin_horizon = GetOldestSafeDecodingTransactionId(!need_full_snapshot);
 
 	SpinLockAcquire(&slot->mutex);
@@ -328,20 +326,18 @@ CreateInitDecodingContext(char *plugin,
 
 	LWLockRelease(ProcArrayLock);
 
-	//而且你下一步就持久化了，你这里标记dirty，多此一举啊。。。。
-	ReplicationSlotMarkDirty();//这里还有个持久化的动作，跟上边的restart_lsn有关系吗？
-	ReplicationSlotSave();//这里的持久化，明显是为了持久化restart
+	ReplicationSlotMarkDirty();
+	ReplicationSlotSave();
 
 	ctx = StartupDecodingContext(NIL, restart_lsn, xmin_horizon,
 								 need_full_snapshot, false,
 								 read_page, prepare_write, do_write,
-								 update_progress);//一句话就是没用
+								 update_progress);
 
 	/* call output plugin initialization callback */
 	old_context = MemoryContextSwitchTo(ctx->context);
 	if (ctx->callbacks.startup_cb != NULL)
-		startup_cb_wrapper(ctx, &ctx->options, true);//插件初始化在这里。。。
-		//可要保证，重启之后也有这步啊。。。
+		startup_cb_wrapper(ctx, &ctx->options, true);
 	MemoryContextSwitchTo(old_context);
 
 	ctx->reorder->output_rewrites = ctx->options.receive_rewrites;
@@ -391,8 +387,6 @@ CreateDecodingContext(XLogRecPtr start_lsn,
 
 	/* shorter lines... */
 	slot = MyReplicationSlot;
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "in CreateDecodingContext:%d\n", getpid());
 
 	/* first some sanity checks that are unlikely to be violated */
 	if (slot == NULL)
@@ -413,8 +407,7 @@ CreateDecodingContext(XLogRecPtr start_lsn,
 	if (start_lsn == InvalidXLogRecPtr)
 	{
 		/* continue from last position */
-		start_lsn = slot->data.confirmed_flush;//这是取出来了，也就是真正当start的时候取出来了
-		fprintf(f, "CreateDecodingContext,start_lsn:%X, :%d\n", start_lsn, getpid());
+		start_lsn = slot->data.confirmed_flush;
 	}
 	else if (start_lsn < slot->data.confirmed_flush)
 	{
@@ -433,9 +426,8 @@ CreateDecodingContext(XLogRecPtr start_lsn,
 
 		start_lsn = slot->data.confirmed_flush;
 	}
-	fclose(f);
-	ctx = StartupDecodingContext(output_plugin_options,//4参传false，解析的时候能直接读快照
-								 start_lsn, InvalidTransactionId, false,//意思说你这样就能做到从confirmed_flush开始？
+	ctx = StartupDecodingContext(output_plugin_options,
+								 start_lsn, InvalidTransactionId, false,
 								 fast_forward, read_page, prepare_write,
 								 do_write, update_progress);
 
@@ -471,7 +463,7 @@ DecodingContextReady(LogicalDecodingContext *ctx)
 /*
  * Read from the decoding slot, until it is ready to start extracting changes.
  */
-void//所以这里是建立一个快照，确定一个合适的confirmed_flush，但这个是Create场景，无所谓，具体看怎么推进
+void
 DecodingContextFindStartpoint(LogicalDecodingContext *ctx)
 {
 	XLogRecPtr	startptr;
@@ -484,9 +476,6 @@ DecodingContextFindStartpoint(LogicalDecodingContext *ctx)
 		 (uint32) (slot->data.restart_lsn >> 32),
 		 (uint32) slot->data.restart_lsn);
 
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "in DecodingContextFindStartpoint, startptr:%X, :%d\n", startptr, getpid());
-
 	/* Wait for a consistent starting point */
 	for (;;)
 	{
@@ -494,8 +483,7 @@ DecodingContextFindStartpoint(LogicalDecodingContext *ctx)
 		char	   *err = NULL;
 
 		/* the read_page callback waits for new WAL */
-		//你还是再确认下，这里到底有没有修改快照相关的内容
-		record = XLogReadRecord(ctx->reader, startptr, &err);//这里应该是跳过一些？
+		record = XLogReadRecord(ctx->reader, startptr, &err);
 		if (err)
 			elog(ERROR, "%s", err);
 		if (!record)
@@ -503,9 +491,7 @@ DecodingContextFindStartpoint(LogicalDecodingContext *ctx)
 
 		startptr = InvalidXLogRecPtr;
 
-		LogicalDecodingProcessRecord(ctx, ctx->reader);//所以我想知道，重启的时候走不走这里？
-		//问题是你在读日志过程中，并没有修改快照相关的内容，怎么会达到后边的状态呢？
-		fprintf(f, "DecodingContextFindStartpoint, snapshot status:%X, :%d\n", SnapBuildCurrentState(ctx->snapshot_builder), getpid());
+		LogicalDecodingProcessRecord(ctx, ctx->reader);
 		/* only continue till we found a consistent spot */
 		if (DecodingContextReady(ctx))
 			break;
@@ -514,11 +500,8 @@ DecodingContextFindStartpoint(LogicalDecodingContext *ctx)
 	}
 
 	SpinLockAcquire(&slot->mutex);
-	slot->data.confirmed_flush = ctx->reader->EndRecPtr;//这里太好了
+	slot->data.confirmed_flush = ctx->reader->EndRecPtr;
 	SpinLockRelease(&slot->mutex);
-	fprintf(f, "DecodingContextFindStartpoint, confirmed_flush:%X, :%d\n", slot->data.confirmed_flush, getpid());
-
-	fclose(f);
 }
 
 /*
@@ -540,7 +523,7 @@ FreeDecodingContext(LogicalDecodingContext *ctx)
 /*
  * Prepare a write using the context's output routine.
  */
-void//从这里看，写‘w'标识的只有插件回调用。
+void
 OutputPluginPrepareWrite(struct LogicalDecodingContext *ctx, bool last_write)
 {
 	if (!ctx->accept_writes)
@@ -553,7 +536,7 @@ OutputPluginPrepareWrite(struct LogicalDecodingContext *ctx, bool last_write)
 /*
  * Perform a write using the context's output routine.
  */
-void//之前看到过，应该是需要个write，write_prepare函数？
+void
 OutputPluginWrite(struct LogicalDecodingContext *ctx, bool last_write)
 {
 	if (!ctx->prepared_write)
@@ -720,11 +703,6 @@ commit_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 
 	Assert(!ctx->fast_forward);
 
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "commit_cb_wrapper: one_phase:%d, %d\n", txn->is_one_phase, getpid());
-	fprintf(f, "commit_cb_wrapper: gxid:%d, %d\n", txn->gxid, getpid());
-	fclose(f);
-
 	/* Push callback + info on the error context stack */
 	state.ctx = ctx;
 	state.callback_name = "commit";
@@ -757,10 +735,6 @@ static void distributed_forget_cb_wrapper(ReorderBuffer *cache, DistributedTrans
 	ctx->accept_writes = true;
 	//ctx->write_xid = txn->xid;
 	//ctx->write_location = txn->end_lsn;
-
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "%d:logical.c wrapper:%ld\n", getpid(), gxid);
-	fclose(f);
 
 	/* do the actual work: call callback */
 	ctx->callbacks.distributed_forget_cb(ctx, gxid, cnt_segments);
@@ -967,7 +941,7 @@ LogicalIncreaseXminForSlot(XLogRecPtr current_lsn, TransactionId xmin)
 		LogicalConfirmReceivedLocation(slot->data.confirmed_flush);
 }
 
-/*//这句话说的太好了，当前所有的没有提交的事务，他们的开始lsn！！！
+/*
  * Mark the minimal LSN (restart_lsn) we need to read to replay all
  * transactions that have not yet committed at current_lsn.
  *
@@ -997,9 +971,9 @@ LogicalIncreaseRestartDecodingForSlot(XLogRecPtr current_lsn, XLogRecPtr restart
 	 * We might have already flushed far enough to directly accept this lsn,
 	 * in this case there is no need to check for existing candidate LSNs
 	 */
-	else if (current_lsn <= slot->data.confirmed_flush)//能进到这个函数，那肯定已经是一致性状态了
+	else if (current_lsn <= slot->data.confirmed_flush)
 	{
-		slot->candidate_restart_valid = current_lsn;//这里可得分清了，一个是running的lsn，一个是他所依赖的那个一致性快照的lsn。。。
+		slot->candidate_restart_valid = current_lsn;
 		slot->candidate_restart_lsn = restart_lsn;
 
 		/* our candidate can directly be used */
@@ -1041,10 +1015,10 @@ LogicalIncreaseRestartDecodingForSlot(XLogRecPtr current_lsn, XLogRecPtr restart
 }
 
 /*
- * Handle a consumer's confirmation having received all changes up to lsn.好厉害的样子
+ * Handle a consumer's confirmation having received all changes up to lsn.
  */
 void
-LogicalConfirmReceivedLocation(XLogRecPtr lsn)//
+LogicalConfirmReceivedLocation(XLogRecPtr lsn)
 {
 	Assert(lsn != InvalidXLogRecPtr);
 
@@ -1057,7 +1031,7 @@ LogicalConfirmReceivedLocation(XLogRecPtr lsn)//
 
 		SpinLockAcquire(&MyReplicationSlot->mutex);
 
-		MyReplicationSlot->data.confirmed_flush = lsn;//所以save只是去持久化，具体设置是在这里
+		MyReplicationSlot->data.confirmed_flush = lsn;
 
 		/* if we're past the location required for bumping xmin, do so */
 		if (MyReplicationSlot->candidate_xmin_lsn != InvalidXLogRecPtr &&
@@ -1082,13 +1056,10 @@ LogicalConfirmReceivedLocation(XLogRecPtr lsn)//
 			}
 		}
 
-		//外边的条件先当成一直有吧
-		//所以这里是自然赋值的
 		if (MyReplicationSlot->candidate_restart_valid != InvalidXLogRecPtr &&
-			MyReplicationSlot->candidate_restart_valid <= lsn)//就是说只要比flush小，就会直接赋值
+			MyReplicationSlot->candidate_restart_valid <= lsn)
 		{
 			Assert(MyReplicationSlot->candidate_restart_lsn != InvalidXLogRecPtr);
-			//就是说，这里其实也有对restart的初始化。。。
 			MyReplicationSlot->data.restart_lsn = MyReplicationSlot->candidate_restart_lsn;
 			MyReplicationSlot->candidate_restart_lsn = InvalidXLogRecPtr;
 			MyReplicationSlot->candidate_restart_valid = InvalidXLogRecPtr;
@@ -1100,7 +1071,7 @@ LogicalConfirmReceivedLocation(XLogRecPtr lsn)//
 		/* first write new xmin to disk, so we know what's up after a crash */
 		if (updated_xmin || updated_restart)
 		{
-			ReplicationSlotMarkDirty();//还是那句话，你先标脏，紧接着就flush了，我真是不理解这逻辑
+			ReplicationSlotMarkDirty();
 			ReplicationSlotSave();
 			elog(DEBUG1, "updated xmin: %u restart: %u", updated_xmin, updated_restart);
 		}
@@ -1124,7 +1095,7 @@ LogicalConfirmReceivedLocation(XLogRecPtr lsn)//
 	else
 	{
 		SpinLockAcquire(&MyReplicationSlot->mutex);
-		MyReplicationSlot->data.confirmed_flush = lsn;//如果这里不是每次必刷，那意思是说还是会有重复的
+		MyReplicationSlot->data.confirmed_flush = lsn;
 		SpinLockRelease(&MyReplicationSlot->mutex);
 	}
 }

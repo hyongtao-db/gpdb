@@ -41,7 +41,7 @@ typedef struct LogicalDecodingContext
 	ReplicationSlot *slot;
 
 	/* infrastructure pieces for decoding */
-	XLogReaderState *reader;//这就是reader了？
+	XLogReaderState *reader;
 	struct ReorderBuffer *reorder;
 	struct SnapBuild *snapshot_builder;
 
@@ -87,7 +87,7 @@ typedef struct LogicalDecodingContext
 	 */
 	bool		accept_writes;
 	bool		prepared_write;
-	XLogRecPtr	write_location;//这里应该是当前日志进度，看看这个咋维护的
+	XLogRecPtr	write_location;
 	TransactionId write_xid;
 } LogicalDecodingContext;
 

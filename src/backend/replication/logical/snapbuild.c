@@ -11,7 +11,7 @@
  * We build snapshots which can *only* be used to read catalog contents and we
  * do so by reading and interpreting the WAL stream. The aim is to build a
  * snapshot that behaves the same as a freshly taken MVCC snapshot would have
- * at the time the XLogRecord was generated.//所以我理解它的事务执行，需要基于快照，而这个机制，就是不断的更新快照
+ * at the time the XLogRecord was generated.
  *
  * To build the snapshots we reuse the infrastructure built for Hot
  * Standby. The in-memory snapshots we build look different than HS' because
@@ -24,7 +24,7 @@
  * commit in the future from the POV of the WAL entry we're currently
  * decoding. This definition has the advantage that we only need to prevent
  * removal of catalog rows, while normal table's rows can still be
- * removed. This is achieved by using the replication slot mechanism.//快照含义不同，依赖元数据，其他的没太懂
+ * removed. This is achieved by using the replication slot mechanism.
  *
  * As the percentage of transactions modifying the catalog normally is fairly
  * small in comparisons to ones only manipulating user data, we keep track of
@@ -105,7 +105,7 @@
  * FULL_SNAPSHOT. That ensures that we'll reach a point where no previous
  * changes has been exported, but all the following ones will be. That point
  * is a convenient point to initialize replication from, which is why we
- * export a snapshot at that point, which *can* be used to read normal data.//这个一致性点，同时也是快照lsn
+ * export a snapshot at that point, which *can* be used to read normal data.
  *
  * Copyright (c) 2012-2019, PostgreSQL Global Development Group
  *
@@ -167,7 +167,6 @@ struct SnapBuild
 	 * Don't replay commits from an LSN < this LSN. This can be set externally
 	 * but it will also be advanced (never retreat) from within snapbuild.c.
 	 */
-	//从它这句话其实还好，针对的都是小于这个lsn的commit，你去看他被调的场景，是不是都在跟commit lsn比较。
 	XLogRecPtr	start_decoding_at;
 
 	/*
@@ -187,7 +186,7 @@ struct SnapBuild
 	/*
 	 * LSN of the last location we are sure a snapshot has been serialized to.
 	 */
-	XLogRecPtr	last_serialized_snapshot;//这里对应的是consistent？
+	XLogRecPtr	last_serialized_snapshot;
 
 	/*
 	 * The reorderbuffer we need to update with usable snapshots et al.
@@ -407,7 +406,7 @@ SnapBuildCurrentState(SnapBuild *builder)
  * Should the contents of transaction ending at 'ptr' be decoded?
  */
 bool
-SnapBuildXactNeedsSkip(SnapBuild *builder, XLogRecPtr ptr)//这个成员就这一个用途。。。
+SnapBuildXactNeedsSkip(SnapBuild *builder, XLogRecPtr ptr)
 {
 	return ptr < builder->start_decoding_at;
 }
@@ -925,7 +924,7 @@ SnapBuildPurgeCommittedTxn(SnapBuild *builder)
 /*
  * Handle everything that needs to be done when a transaction commits
  */
-void//这个lsn是事务的哪个lsn？
+void
 SnapBuildCommitTxn(SnapBuild *builder, XLogRecPtr lsn, TransactionId xid,
 				   int nsubxacts, TransactionId *subxacts)
 {
@@ -941,13 +940,13 @@ SnapBuildCommitTxn(SnapBuild *builder, XLogRecPtr lsn, TransactionId xid,
 	 * Transactions preceding BUILDING_SNAPSHOT will neither be decoded, nor
 	 * will they be part of a snapshot.  So we don't need to record anything.
 	 */
-	if (builder->state == SNAPBUILD_START ||//这里仅仅是返回，并没有让decode停止，所以阻挠decode的，肯定是更高级的状态
+	if (builder->state == SNAPBUILD_START ||
 		(builder->state == SNAPBUILD_BUILDING_SNAPSHOT &&
-		 TransactionIdPrecedes(xid, SnapBuildNextPhaseAt(builder))))//这个不太懂，但意思应该是说快照构建以然出于当前状态不动
+		 TransactionIdPrecedes(xid, SnapBuildNextPhaseAt(builder))))
 	{
 		/* ensure that only commits after this are getting replayed */
 		if (builder->start_decoding_at <= lsn)
-			builder->start_decoding_at = lsn + 1;//ok，这里推进没问题。
+			builder->start_decoding_at = lsn + 1;
 		return;
 	}
 
@@ -955,7 +954,7 @@ SnapBuildCommitTxn(SnapBuild *builder, XLogRecPtr lsn, TransactionId xid,
 	{
 		/* ensure that only commits after this are getting replayed */
 		if (builder->start_decoding_at <= lsn)
-			builder->start_decoding_at = lsn + 1;//就是说你这个变量能决定谁能被replay？
+			builder->start_decoding_at = lsn + 1;
 
 		/*
 		 * If building an exportable snapshot, force xid to be tracked, even
@@ -1103,18 +1102,15 @@ SnapBuildProcessRunningXacts(SnapBuild *builder, XLogRecPtr lsn, xl_running_xact
 	 * allows to get closer to being consistent. If we are consistent, dump
 	 * our snapshot so others or we, after a restart, can use it.
 	 */
-	if (builder->state < SNAPBUILD_CONSISTENT)//到达一致性状态后，就不需要这个步骤了，我们关心的是restart是否会过分地前进
+	if (builder->state < SNAPBUILD_CONSISTENT)
 	{
 		/* returns false if there's no point in performing cleanup just yet */
-		if (!SnapBuildFindSnapshot(builder, lsn, running))//也就是说如果有快照的话，直接就返回了
-			return;//也就是说后边包含清理的动作？
-		//这个快照是挂机之前解析的时候写的。。。
-		//靠。。。那还得4段式啊。。。
+		if (!SnapBuildFindSnapshot(builder, lsn, running))
+			return;
 	}
 	else
-		SnapBuildSerialize(builder, lsn);//ok，这是把快照序列化到磁盘上
+		SnapBuildSerialize(builder, lsn);
 
-	//假设是刚变完consistent
 	/*
 	 * Update range of interesting xids based on the running xacts
 	 * information. We don't increase ->xmax using it, because once we are in
@@ -1141,7 +1137,7 @@ SnapBuildProcessRunningXacts(SnapBuild *builder, XLogRecPtr lsn, xl_running_xact
 	 * we'll produce later, which can't be less than the oldest running xid in
 	 * the record we're reading now.
 	 */
-	xmin = ReorderBufferGetOldestXmin(builder->reorder);//xmin对后边的restart_lsn没有影响就不管了。
+	xmin = ReorderBufferGetOldestXmin(builder->reorder);
 	if (xmin == InvalidTransactionId)
 		xmin = running->oldestRunningXid;
 	elog(DEBUG3, "xmin: %u, xmax: %u, oldest running: %u, oldest xmin: %u",
@@ -1152,36 +1148,29 @@ SnapBuildProcessRunningXacts(SnapBuild *builder, XLogRecPtr lsn, xl_running_xact
 	 * Also tell the slot where we can restart decoding from. We don't want to
 	 * do that after every commit because changing that implies an fsync of
 	 * the logical slot's state file, so we only do it every time we see a
-	 * running xacts record.//意思是说其实你也觉得，在一些事务commit的地方也可以这么搞
+	 * running xacts record.
 	 *
 	 * Do so by looking for the oldest in progress transaction (determined by
 	 * the first LSN of any of its relevant records). Every transaction
 	 * remembers the last location we stored the snapshot to disk before its
-	 * beginning. That point is where we can restart from.//这句话值10000块钱。。。
+	 * beginning. That point is where we can restart from.
 	 */
 
 	/*
 	 * Can't know about a serialized snapshot's location if we're not
-	 * consistent.//我们需要的是一个，已经序列化持久化的快照！！！这句话值15000块钱。。。
+	 * consistent.
 	 */
-	if (builder->state < SNAPBUILD_CONSISTENT)//后边的只有一致性状态才会跑
+	if (builder->state < SNAPBUILD_CONSISTENT)
 		return;
-	//比如说，我第一次进来，restart_lsn是否会被推进
 
-	//这里也说了，就是最老的事务，感兴趣的话看看怎么淘汰的
-	//奇怪，他为什么不从running_act中拿？虽然我感觉这俩含义相同
 	txn = ReorderBufferGetOldestTXN(builder->reorder);
 
 	/*
 	 * oldest ongoing txn might have started when we didn't yet serialize
 	 * anything because we hadn't reached a consistent state yet.
 	 */
-	//这意思应该是说下边条件的相反情况
 	if (txn != NULL && txn->restart_decoding_lsn != InvalidXLogRecPtr)
 		LogicalIncreaseRestartDecodingForSlot(lsn, txn->restart_decoding_lsn);
-	////就是说，从一个能解析这个最老事务的restart_lsn开始
-	//意思是说我从你的这个值restart，就能解析你这个事务，的最晚的一个lsn？
-	//那我走这段，要不要四段式？
 
 	/*
 	 * No in-progress transaction, can reuse the last serialized snapshot if
@@ -1206,7 +1195,7 @@ SnapBuildProcessRunningXacts(SnapBuild *builder, XLogRecPtr lsn, xl_running_xact
  */
 static bool
 SnapBuildFindSnapshot(SnapBuild *builder, XLogRecPtr lsn, xl_running_xacts *running)
-{	
+{
 	/* ---
 	 * Build catalog decoding snapshot incrementally using information about
 	 * the currently running transactions. There are several ways to do that:
@@ -1251,7 +1240,7 @@ SnapBuildFindSnapshot(SnapBuild *builder, XLogRecPtr lsn, xl_running_xacts *runn
 	}
 
 	/*
-	 * a) No transaction were running, we can jump to consistent.//那我问个问题，这个快照，这种情况下究竟在哪？
+	 * a) No transaction were running, we can jump to consistent.
 	 *
 	 * This is not affected by races around xl_running_xacts, because we can
 	 * miss transaction commits, but currently not transactions starting.
@@ -1267,7 +1256,7 @@ SnapBuildFindSnapshot(SnapBuild *builder, XLogRecPtr lsn, xl_running_xacts *runn
 			builder->start_decoding_at = lsn + 1;
 
 		/* As no transactions were running xmin/xmax can be trivially set. */
-		builder->xmin = running->nextXid;	/* < are finished *///这俩注释真贴心
+		builder->xmin = running->nextXid;	/* < are finished */
 		builder->xmax = running->nextXid;	/* >= are running */
 
 		/* so we can safely use the faster comparisons */
@@ -1286,7 +1275,7 @@ SnapBuildFindSnapshot(SnapBuild *builder, XLogRecPtr lsn, xl_running_xacts *runn
 	}
 	/* b) valid on disk state and not building full snapshot */
 	else if (!builder->building_full_snapshot &&
-			 SnapBuildRestore(builder, lsn))//我去，这里能直接取出来！！！然后呢，有会变成consitent吗？
+			 SnapBuildRestore(builder, lsn))
 	{
 		/* there won't be any state to cleanup */
 		return false;
@@ -1303,7 +1292,7 @@ SnapBuildFindSnapshot(SnapBuild *builder, XLogRecPtr lsn, xl_running_xacts *runn
 	 * as running, might already have inserted their commit record - it's
 	 * infeasible to change that with locking.
 	 */
-	else if (builder->state == SNAPBUILD_START)//这里是构建流程，跟阻挠decode无关
+	else if (builder->state == SNAPBUILD_START)
 	{
 		builder->state = SNAPBUILD_BUILDING_SNAPSHOT;
 		SnapBuildStartNextPhaseAt(builder, running->nextXid);
@@ -1366,7 +1355,7 @@ SnapBuildFindSnapshot(SnapBuild *builder, XLogRecPtr lsn, xl_running_xacts *runn
 			 TransactionIdPrecedesOrEquals(SnapBuildNextPhaseAt(builder),
 										   running->oldestRunningXid))
 	{
-		builder->state = SNAPBUILD_CONSISTENT;//他只做了这两步，没有持久化之类的动作。
+		builder->state = SNAPBUILD_CONSISTENT;
 		SnapBuildStartNextPhaseAt(builder, InvalidTransactionId);
 
 		ereport(LOG,
@@ -1415,7 +1404,7 @@ SnapBuildWaitSnapshot(xl_running_xacts *running, TransactionId cutoff)
 		if (TransactionIdFollows(xid, cutoff))
 			continue;
 
-		XactLockTableWait(xid, NULL, NULL, XLTW_None);//我去，还有这么个功能啊。。。等待某事务结束。。。
+		XactLockTableWait(xid, NULL, NULL, XLTW_None);
 	}
 
 	/*
@@ -1491,9 +1480,6 @@ SnapBuildSerializationPoint(SnapBuild *builder, XLogRecPtr lsn)
  * Serialize the snapshot 'builder' at the location 'lsn' if it hasn't already
  * been done by another decoding process.
  */
-//这里是一个一致性点，也是一个running所在的lsn
-//如果把restart设置在这里，会怎样？
-//不会走4段式吗？那我只能认为，从这里走，无需4段式，4段式，只有在create时才需要。。。才怪。。。
 static void
 SnapBuildSerialize(SnapBuild *builder, XLogRecPtr lsn)
 {
@@ -1692,7 +1678,6 @@ SnapBuildSerialize(SnapBuild *builder, XLogRecPtr lsn)
 	 * Now there's no way we can loose the dumped state anymore, remember this
 	 * as a serialization point.
 	 */
-	//这里的操作难道不是最新的一个吗？为什么说成是last？
 	builder->last_serialized_snapshot = lsn;
 
 out:
@@ -1890,7 +1875,6 @@ SnapBuildRestore(SnapBuild *builder, XLogRecPtr lsn)
 	 */
 	if (ondisk.builder.state < SNAPBUILD_CONSISTENT)
 		goto snapshot_not_interesting;
-	//说明下边是一致性的情况
 
 	/*
 	 * Don't use a snapshot that requires an xmin that we cannot guarantee to
@@ -1903,7 +1887,7 @@ SnapBuildRestore(SnapBuild *builder, XLogRecPtr lsn)
 	/* ok, we think the snapshot is sensible, copy over everything important */
 	builder->xmin = ondisk.builder.xmin;
 	builder->xmax = ondisk.builder.xmax;
-	builder->state = ondisk.builder.state;//这里没说。。。但就是一致性！！！！！！！
+	builder->state = ondisk.builder.state;
 
 	builder->committed.xcnt = ondisk.builder.committed.xcnt;
 	/* We only allocated/stored xcnt, not xcnt_space xids ! */

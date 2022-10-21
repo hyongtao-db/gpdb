@@ -22,8 +22,6 @@
 #include "utils/timestamp.h"
 #include "access/twophase_xlog.h"
 
-#include "unistd.h"
-
 /*
  * Parse the WAL format of an xact commit and abort records into an easier to
  * understand format.
@@ -147,16 +145,11 @@ ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *pars
 		parsed->distribXid = xl_distrib->distrib_xid;
 		parsed->is_one_phase = xl_distrib->is_one_phase;
 
-		FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-		fprintf(f, "ParseCommitRecord parse one_phase:%d, pid:%d\n", xl_distrib->is_one_phase, getpid());
-		fprintf(f, "ParseCommitRecord distribXid:%d, pid:%d\n", xl_distrib->distrib_xid, getpid());
-		fclose(f);
-
 		data += sizeof(xl_xact_distrib);
 	}
 }
 
-void//我这里需要传入这个info吗？
+void
 ParseDistributedForgetRecord(uint8 info, xl_xact_distributed_forget *xlrec, xl_xact_parsed_distributed_forget *parsed)
 {
 	parsed->gxid = xlrec->gxid;

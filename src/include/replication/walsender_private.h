@@ -29,7 +29,7 @@ typedef enum WalSndState
 } WalSndState;
 
 /*
- * Each walsender has a WalSnd struct in shared memory.//话说你能有几个walsender啊。。。
+ * Each walsender has a WalSnd struct in shared memory.
  *
  * This struct is protected by 'mutex', with two exceptions: one is
  * sync_standby_priority as noted below.  The other exception is that some

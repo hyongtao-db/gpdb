@@ -70,7 +70,7 @@ typedef struct ReplicationSlotOnDisk
 	 * 'version'.
 	 */
 
-	ReplicationSlotPersistentData slotdata;//核心结构还是他
+	ReplicationSlotPersistentData slotdata;
 } ReplicationSlotOnDisk;
 
 /* size of version independent data */
@@ -128,7 +128,7 @@ ReplicationSlotsShmemSize(void)
 /*
  * Allocate and initialize walsender-related shared memory.
  */
-void//重启过程中会调这个吗？
+void
 ReplicationSlotsShmemInit(void)
 {
 	bool		found;
@@ -705,7 +705,7 @@ ReplicationSlotPersist(void)
 	SpinLockRelease(&slot->mutex);
 
 	ReplicationSlotMarkDirty();
-	ReplicationSlotSave();//刚设置就来了一下。。。
+	ReplicationSlotSave();
 }
 
 /*
@@ -1004,10 +1004,10 @@ CheckSlotRequirements(void)
 }
 
 /*
- * Reserve WAL for the currently active slot.//保留是说不让你删除吗？。。。其实应该看看它具体是怎么防止被删除的
+ * Reserve WAL for the currently active slot.
  *
  * Compute and set restart_lsn in a manner that's appropriate for the type of
- * the slot and concurrency safe.//合适的方式给
+ * the slot and concurrency safe.
  */
 void
 ReplicationSlotReserveWal(void)
@@ -1040,12 +1040,11 @@ ReplicationSlotReserveWal(void)
 		 * the chance that we have to retry, it's where a base backup has to
 		 * start replay at.
 		 */
-		if (!RecoveryInProgress() && SlotIsLogical(slot))//恢复流程真是我的心病
+		if (!RecoveryInProgress() && SlotIsLogical(slot))
 		{
 			XLogRecPtr	flushptr;
 
 			/* start at current insert position */
-			//
 			restart_lsn = GetXLogInsertRecPtr();
 			SpinLockAcquire(&slot->mutex);
 			slot->data.restart_lsn = restart_lsn;
@@ -1066,7 +1065,7 @@ ReplicationSlotReserveWal(void)
 		}
 
 		/* prevent WAL removal as fast as possible */
-		ReplicationSlotsComputeRequiredLSN();//这里应该就是留存后防止被删的机制了
+		ReplicationSlotsComputeRequiredLSN();
 
 		/*
 		 * If all required WAL is still there, great, otherwise retry. The
@@ -1088,7 +1087,7 @@ ReplicationSlotReserveWal(void)
  * location.
  */
 void
-CheckPointReplicationSlots(void)//这里是检查点时的操作？
+CheckPointReplicationSlots(void)
 {
 	int			i;
 
@@ -1287,7 +1286,7 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
 
 	SpinLockAcquire(&slot->mutex);
 
-	memcpy(&cp.slotdata, &slot->data, sizeof(ReplicationSlotPersistentData));//这里持久化，这赋值真是花
+	memcpy(&cp.slotdata, &slot->data, sizeof(ReplicationSlotPersistentData));
 
 	SpinLockRelease(&slot->mutex);
 
@@ -1368,7 +1367,7 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
 	 */
 	SpinLockAcquire(&slot->mutex);
 	if (!slot->just_dirtied)
-		slot->dirty = false;//吼猴
+		slot->dirty = false;
 	SpinLockRelease(&slot->mutex);
 
 	LWLockRelease(&slot->io_in_progress_lock);
@@ -1378,7 +1377,7 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
  * Load a single slot from disk into memory.
  */
 static void
-RestoreSlotFromDisk(const char *name)//哈哈哈，哈哈哈，哈哈哈哈哈！！！
+RestoreSlotFromDisk(const char *name)
 {
 	ReplicationSlotOnDisk cp;
 	int			i;
@@ -1388,9 +1387,6 @@ RestoreSlotFromDisk(const char *name)//哈哈哈，哈哈哈，哈哈哈哈哈�
 	bool		restored = false;
 	int			readBytes;
 	pg_crc32c	checksum;
-
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "in RestoreSlotFromDisk:%d\n", getpid());
 
 	/* no need to lock here, no concurrent access allowed yet */
 
@@ -1436,7 +1432,7 @@ RestoreSlotFromDisk(const char *name)//哈哈哈，哈哈哈，哈哈哈哈哈�
 
 	/* read part of statefile that's guaranteed to be version independent */
 	pgstat_report_wait_start(WAIT_EVENT_REPLICATION_SLOT_READ);
-	readBytes = read(fd, &cp, ReplicationSlotOnDiskConstantSize);//就生读啊，你写的时候直接memcopy过去的？
+	readBytes = read(fd, &cp, ReplicationSlotOnDiskConstantSize);
 	pgstat_report_wait_end();
 	if (readBytes != ReplicationSlotOnDiskConstantSize)
 	{
@@ -1557,17 +1553,14 @@ RestoreSlotFromDisk(const char *name)//哈哈哈，哈哈哈，哈哈哈哈哈�
 
 		slot = &ReplicationSlotCtl->replication_slots[i];
 
-		if (slot->in_use)//这我就不明白了，你不重启吗，咋还能有正用的。。。
+		if (slot->in_use)
 			continue;
 
 		/* restore the entire set of persistent data */
 		memcpy(&slot->data, &cp.slotdata,
 			   sizeof(ReplicationSlotPersistentData));
 
-		fprintf(f, "RestoreSlotFromDisk:restart_lsn:%X, confirm_flush:%X, %d\n", (slot->data).restart_lsn, (slot->data).confirmed_flush, getpid());
-
 		/* initialize in memory state */
-		//如果是只恢复这些的话，那意思是说包括开始lsn在内的内容都在这里边？
 		slot->effective_xmin = cp.slotdata.xmin;
 		slot->effective_catalog_xmin = cp.slotdata.catalog_xmin;
 
@@ -1583,7 +1576,6 @@ RestoreSlotFromDisk(const char *name)//哈哈哈，哈哈哈，哈哈哈哈哈�
 		break;
 	}
 
-	fclose(f);
 	if (!restored)
 		ereport(FATAL,
 				(errmsg("too many replication slots active before shutdown"),
