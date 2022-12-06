@@ -26,7 +26,31 @@
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/rangetypes.h"
+#include "storage/lwlock.h"
 
+
+Datum
+gp_helloworld(PG_FUNCTION_ARGS)
+{
+    char str[] = "Hello Greenplum!";
+    PG_RETURN_TEXT_P(cstring_to_text(str));
+}
+
+Datum
+gp_createbiglock(PG_FUNCTION_ARGS)
+{
+	LWLockAcquire(TwophaseCommitLock, LW_EXCLUSIVE);
+    char str[] = "CREATE BIG LOCK!";
+    PG_RETURN_TEXT_P(cstring_to_text(str));
+}
+
+Datum
+gp_releasebiglock(PG_FUNCTION_ARGS)
+{
+	LWLockRelease(TwophaseCommitLock);
+    char str[] = "RELEASE BIG LOCK!";
+    PG_RETURN_TEXT_P(cstring_to_text(str));
+}
 
 /*
  * cstring_in		- input routine for pseudo-type CSTRING.
