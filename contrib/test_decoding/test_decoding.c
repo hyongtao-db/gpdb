@@ -24,6 +24,8 @@
 
 #include "unistd.h"
 
+#include "cdb/cdbvars.h"
+
 PG_MODULE_MAGIC;
 
 /* These must be available to pg_dlsym() */
@@ -262,6 +264,17 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 		appendStringInfo(ctx->out, " (at %s)",
 						 timestamptz_to_str(txn->commit_time));
 
+	char tmp[2000];
+	//memcpy(tmp, ctx->out->data, ctx->out->len+1);
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "commit data len:%d\n", ctx->out->len);
+	for(int i = 0; i < ctx->out->len; ++i)
+	{
+		//fprintf(f, "%c", tmp[i]);
+	}
+	fprintf(f, "\n");
+	fclose(f);
+
 	OutputPluginWrite(ctx, true);
 }
 
@@ -351,6 +364,120 @@ print_literal(StringInfo s, Oid typid, char *outputstr)
 			appendStringInfoChar(s, '\'');
 			break;
 	}
+}
+
+/* print the tuple 'tuple' into the StringInfo s */
+static void
+tuple_to_kafka_value(StringInfo s, TupleDesc tupdesc, HeapTuple tuple, bool skip_nulls)
+{
+	int			natt;
+
+	/* print all columns individually */
+	for (natt = 0; natt < tupdesc->natts; natt++)
+	{
+		Form_pg_attribute attr; /* the attribute itself */
+		Oid			typid;		/* type of current attribute */
+		Oid			typoutput;	/* output function */
+		bool		typisvarlena;
+		Datum		origval;	/* possibly toasted Datum */
+		bool		isnull;		/* column is null? */
+
+		attr = TupleDescAttr(tupdesc, natt);
+
+		/*
+		 * don't print dropped columns, we can't be sure everything is
+		 * available for them
+		 */
+		if (attr->attisdropped)
+			continue;
+
+		/*
+		 * Don't print system columns, oid will already have been printed if
+		 * present.
+		 */
+		if (attr->attnum < 0)
+			continue;
+
+		typid = attr->atttypid;
+
+		/* get Datum from tuple */
+		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
+
+		if (isnull && skip_nulls)
+			continue;
+
+		/* print attribute name */
+		appendStringInfoString(s, quote_identifier(NameStr(attr->attname)));
+
+		/* print attribute type */
+		appendStringInfoString(s, "<*>");
+		appendStringInfoString(s, format_type_be(typid));
+		appendStringInfoString(s, "<*>");
+
+		/* query output function */
+		getTypeOutputInfo(typid,
+						  &typoutput, &typisvarlena);
+
+		/* print data */
+		if (isnull)
+			appendStringInfoString(s, "null");
+		else if (typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval))
+			appendStringInfoString(s, "unchanged-toast-datum");
+		else if (!typisvarlena)
+			print_literal(s, typid,
+						  OidOutputFunctionCall(typoutput, origval));
+		else
+		{
+			Datum		val;	/* definitely detoasted Datum */
+
+			val = PointerGetDatum(PG_DETOAST_DATUM(origval));
+			print_literal(s, typid, OidOutputFunctionCall(typoutput, val));
+		}
+		appendStringInfoString(s, "<*>");
+	}
+}
+
+static StringInfo get_delimited_data(Relation relation, ReorderBufferChange *change, ReorderBufferTXN *txn)
+{
+	StringInfo sendKafkaValue = makeStringInfo();
+	Form_pg_class class_form = RelationGetForm(relation);
+	TupleDesc tupdesc = RelationGetDescr(relation);
+
+	// append scheme and table info
+	appendStringInfoString(sendKafkaValue,
+						   quote_qualified_identifier(
+													  get_namespace_name(
+																		 get_rel_namespace(RelationGetRelid(relation))),
+													  class_form->relrewrite ?
+													  get_rel_name(class_form->relrewrite) :
+													  NameStr(class_form->relname)));
+	appendStringInfoString(sendKafkaValue, "<*>");
+
+	// append action
+	if (change->action == REORDER_BUFFER_CHANGE_INSERT)
+	{
+		appendStringInfoString(sendKafkaValue, "insert<*>");
+	}
+	else if (change->action == REORDER_BUFFER_CHANGE_UPDATE)
+	{
+		appendStringInfoString(sendKafkaValue, "update<*>");
+	}
+	else if (change->action == REORDER_BUFFER_CHANGE_DELETE)
+	{
+		appendStringInfoString(sendKafkaValue, "delete<*>");
+	}
+
+	appendStringInfo(sendKafkaValue, "%X", txn->final_lsn);
+	appendStringInfoString(sendKafkaValue, "<*>");
+
+	// append data
+	if (change->data.tp.newtuple == NULL)
+		appendStringInfoString(sendKafkaValue, " (no-tuple-data)");
+	else
+		tuple_to_kafka_value(sendKafkaValue, tupdesc,
+							&change->data.tp.newtuple->tuple,
+							false);
+	return sendKafkaValue;
 }
 
 /* print the tuple 'tuple' into the StringInfo s */
@@ -513,6 +640,27 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
+
+	StringInfo sendKafkaValue = get_delimited_data(relation, change, txn);
+	//sendKafkaValue->data, sendKafkaValue->len
+
+	char tmp[2000];
+	memcpy(tmp, ctx->out->data, ctx->out->len+1);
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "change data len:%d\n", ctx->out->len);
+	fprintf(f, "segid:%d\n", GpIdentity.segindex);
+	/*
+	for(int i = 0; i < ctx->out->len; ++i)
+	{
+		fprintf(f, "%c", tmp[i]);
+	}
+	*/
+	for(int i = 0; i < sendKafkaValue->len; ++i)
+	{
+		fprintf(f, "%c", sendKafkaValue->data[i]);
+	}
+	fprintf(f, "\n");
+	fclose(f);
 
 	OutputPluginWrite(ctx, true);
 }

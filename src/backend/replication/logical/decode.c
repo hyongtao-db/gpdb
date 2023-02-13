@@ -245,6 +245,7 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	{
 		case XLOG_XACT_COMMIT:
 		case XLOG_XACT_COMMIT_PREPARED:
+			{
 				xl_xact_commit *xlrec;
 				xl_xact_parsed_commit parsed;
 				TransactionId xid;

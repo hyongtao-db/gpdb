@@ -129,6 +129,7 @@
 #include "postmaster/bgworker.h"
 #include "replication/logicallauncher.h"
 #include "replication/walsender.h"
+#include "replication/walsendercontroller.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "storage/pg_shmem.h"
@@ -2418,10 +2419,29 @@ retry1:
 				 * connects to a specific database which is e.g. required for
 				 * logical decoding while.
 				 */
-				if (strcmp(valptr, "database") == 0)
+				if (strcmp(valptr, "master") == 0)
 				{
 					am_walsender = true;
 					am_db_walsender = true;
+				}
+				else if (strcmp(valptr, "database") == 0)
+				{
+					FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+					fprintf(f, "gprole:%d, pid:%d\n", Gp_role, getpid());
+					fclose(f);
+
+					if (Gp_role == GP_ROLE_DISPATCH)
+					{
+						FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+						fprintf(f, "walsender_controller process,pid:%d\n", getpid());
+						fclose(f);
+						am_walsender_controller = true;
+					}
+					else
+					{
+						am_walsender = true;
+						am_db_walsender = true;
+					}
 				}
 				else if (!parse_bool(valptr, &am_walsender))
 					ereport(FATAL,
@@ -4628,6 +4648,8 @@ BackendStartup(Port *port)
 
 		/* Close the postmaster's sockets */
 		ClosePostmasterPorts(false);
+
+		//sleep(20);
 
 		/* Perform additional initialization and collect startup packet */
 		BackendInitialize(port);

@@ -68,6 +68,7 @@
 #include "replication/logicalworker.h"
 #include "replication/slot.h"
 #include "replication/walsender.h"
+#include "replication/walsendercontroller.h"
 #include "rewrite/rewriteHandler.h"
 #include "storage/bufmgr.h"
 #include "storage/ipc.h"
@@ -5340,6 +5341,11 @@ PostgresMain(int argc, char *argv[],
 					if (am_walsender)
 					{
 						if (!exec_replication_command(query_string))
+							exec_simple_query(query_string);
+					}
+					else if (am_walsender_controller)
+					{
+						if (!exec_walsendercontroller_command(query_string))
 							exec_simple_query(query_string);
 					}
 					else if (am_ftshandler)

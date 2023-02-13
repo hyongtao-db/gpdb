@@ -892,6 +892,10 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 	Datum		values[4];
 	bool		nulls[4];
 
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "segment in CreateReplicationSlot\n");
+	fclose(f);
+
 	Assert(!MyReplicationSlot);
 
 	parseCreateReplSlotOptions(cmd, &reserve_wal, &snapshot_action);
@@ -1092,6 +1096,9 @@ DropReplicationSlot(DropReplicationSlotCmd *cmd)
 static void
 StartLogicalReplication(StartReplicationCmd *cmd)
 {
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in segment StartLogicalReplication\n");
+
 	StringInfoData buf;
 
 	/* make sure that our requirements are still fulfilled */
@@ -1153,8 +1160,11 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 
 	SyncRepInitConfig();
 
+	fprintf(f, "befor send loop\n");
 	/* Main loop of walsender */
 	WalSndLoop(XLogSendLogical);
+	fprintf(f, "after send loop\n");
+	fclose(f);
 
 	FreeDecodingContext(logical_decoding_ctx);
 	ReplicationSlotRelease();
@@ -1465,6 +1475,9 @@ exec_replication_command(const char *cmd_string)
 	MemoryContext cmd_context;
 	MemoryContext old_context;
 
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in segment exec_replication_command\n");
+
 	/*
 	 * If WAL sender has been told that shutdown is getting close, switch its
 	 * status accordingly to handle the next replication commands correctly.
@@ -1600,7 +1613,6 @@ exec_replication_command(const char *cmd_string)
 
 			/* Report to pgstat that this process is now idle */
 			pgstat_report_activity(STATE_IDLE, NULL);
-
 			/* Tell the caller that this wasn't a WalSender command. */
 			return false;
 
@@ -1618,6 +1630,9 @@ exec_replication_command(const char *cmd_string)
 
 	/* Report to pgstat that this process is now idle */
 	pgstat_report_activity(STATE_IDLE, NULL);
+
+	fprintf(f, "before return true\n");
+	fclose(f);
 
 	return true;
 }

@@ -48,6 +48,7 @@
 #include "replication/slot.h"
 #include "replication/syncrep.h"
 #include "replication/walsender.h"
+#include "replication/walsendercontroller.h"
 #include "storage/condition_variable.h"
 #include "storage/standby.h"
 #include "storage/ipc.h"
@@ -348,7 +349,7 @@ InitProcess(void)
 	 * RecoveryInProgress() to see if we are in hot standby, because
 	 * HotStandbyActive() is still true after promotion.
 	 */
-	if (am_walsender || am_ftshandler || am_faulthandler ||
+	if (am_walsender || am_walsender_controller || am_ftshandler || am_faulthandler ||
 		(GpIdentity.segindex == -1 && RecoveryInProgress()))
 	{
 		Gp_role = GP_ROLE_UTILITY;

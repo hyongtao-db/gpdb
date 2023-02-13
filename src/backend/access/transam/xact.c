@@ -661,6 +661,10 @@ GetStableLatestTransactionId(void)
 static void
 AssignTransactionId(TransactionState s)
 {
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in AssignTransactionId\n");
+	fclose(f);
+
 	bool		isSubXact = (s->parent != NULL);
 	ResourceOwner currentOwner;
 	bool		log_unknown_top = false;
@@ -2327,6 +2331,12 @@ SetSharedTransactionId_reader(FullTransactionId xid, CommandId cid, DtxContext d
 static void
 StartTransaction(void)
 {
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		LWLockAcquire(StartTransactionLock, LW_SHARED);
+		LWLockRelease(StartTransactionLock);
+	}
+
 	TransactionState s;
 	VirtualTransactionId vxid;
 
