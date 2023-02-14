@@ -68,7 +68,7 @@ static void pg_decode_message(LogicalDecodingContext *ctx,
 							  Size sz, const char *message);
 
 static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
-										 DistributedTransactionId gxid, int cnt_segments);
+										 DistributedTransactionId gxid, int cnt_segments, int segment_ids[3]);
 
 void
 _PG_init(void)
@@ -279,28 +279,46 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 }
 
 static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
-										 DistributedTransactionId gxid, int cnt_segments)
+										 DistributedTransactionId gxid, int cnt_segments, int segment_ids[3])
 {
 	TestDecodingData *data = ctx->output_plugin_private;
 
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "%d:test_decoding, call back:%ld\n", getpid(), gxid);
+	//fprintf(f, "%d:test_decoding, call back:%ld\n", getpid(), gxid);
 
 	//这两行可别对我们造成什么影响
 	data->xact_wrote_changes = false;
 	if (data->skip_empty_xacts)
 		return;
 
-	fprintf(f, "%d:test_decoding, pass the return:%ld\n", getpid(), gxid);
-	fclose(f);
+	//fprintf(f, "%d:test_decoding, pass the return:%ld\n", getpid(), gxid);
 
 	//这里我就跟上边保持一样了，理论上不会有
 	OutputPluginPrepareWrite(ctx, true);//推测2参是本次调用这里是否是最后一写。
 	
-	appendStringInfo(ctx->out, "DISTRIBUTED FORGET %ld", gxid);
-	appendStringInfo(ctx->out, " count of segments:%d", cnt_segments);
+	appendStringInfo(ctx->out, "DISTRIBUTED FORGET %ld ", gxid);
+	//appendStringInfo(ctx->out, " count of segments:%d", cnt_segments);
+	
+	fprintf(f, "segment cnt:%d\n", cnt_segments);
+	fprintf(f, "segment value:%d\n", segment_ids[0]);
+	/*
+	for(int i = 0; i < cnt_segments-1; ++i)
+	{
+		appendStringInfo(ctx->out, "segment %d,", segment_ids[i]);
+	}
+	appendStringInfo(ctx->out, "segment %d", segment_ids[cnt_segments-1]);
+	*/
+
+	for(int i = 0; i < ctx->out->len; ++i)
+	{
+		fprintf(f, "%c", ctx->out->data[i]);
+	}
+	fprintf(f, "\n");
+	//fprintf(f, "%s\n", ctx->out->data);
 
 	OutputPluginWrite(ctx, true);
+
+	fclose(f);
 }
 
 static bool

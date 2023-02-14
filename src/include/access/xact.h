@@ -393,12 +393,15 @@ typedef struct xl_xact_distributed_forget
 {
 	DistributedTransactionId gxid;
 	int cnt_segments;
+	int segment_ids[FLEXIBLE_ARRAY_MEMBER];
 } xl_xact_distributed_forget;
+#define MinSizeOfXactDistributedForget offsetof(xl_xact_distributed_forget, segment_ids)
 
 typedef struct xl_xact_parsed_distributed_forget
 {
 	DistributedTransactionId gxid;
 	int cnt_segments;
+	int segment_ids[FLEXIBLE_ARRAY_MEMBER];
 } xl_xact_parsed_distributed_forget;
 
 /* ----------------

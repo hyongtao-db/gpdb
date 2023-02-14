@@ -100,7 +100,7 @@ typedef bool (*LogicalDecodeFilterByOriginCB) (struct LogicalDecodingContext *ct
 typedef void (*LogicalDecodeShutdownCB) (struct LogicalDecodingContext *ctx);
 
 typedef void (*LogicalDecodeDistributedForgetCB) (struct LogicalDecodingContext *ctx,
-									   			  DistributedTransactionId gxid, int cnt_segments);
+									   			  DistributedTransactionId gxid, int cnt_segments, int segment_ids[3]);
 
 /*
  * Output plugin callbacks

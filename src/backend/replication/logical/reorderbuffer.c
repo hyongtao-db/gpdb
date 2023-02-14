@@ -1844,8 +1844,8 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 }
 
 void
-ReorderBufferDistributedForget(ReorderBuffer *rb, DistributedTransactionId gxid, int cnt_segments) {
-	rb->distributed_forget(rb, gxid, cnt_segments);
+ReorderBufferDistributedForget(ReorderBuffer *rb, DistributedTransactionId gxid, int cnt_segments, int segment_ids[3]) {
+	rb->distributed_forget(rb, gxid, cnt_segments, segment_ids);
 }
 
 /*

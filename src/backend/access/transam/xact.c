@@ -1798,15 +1798,31 @@ cleanup:
 void
 RecordDistributedForgetCommitted(DistributedTransactionId gxid)
 {
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in RecordDistributedForgetCommitted\n");
 	xl_xact_distributed_forget xlrec;
 
 	xlrec.gxid = gxid;
 	xlrec.cnt_segments = list_length(MyTmGxactLocal->dtxSegments);
+	int segment_ids[100];//for now
+
+	ListCell *lc = NULL;
+	int i = 0;
+	foreach_with_count(lc, MyTmGxactLocal->dtxSegments, i)
+	{
+		segment_ids[i] = lfirst_int(lc);
+		fprintf(f, "%d ", segment_ids[i]);
+	}
+	fprintf(f, "\n");
 
 	XLogBeginInsert();
-	XLogRegisterData((char *) &xlrec, sizeof(xl_xact_distributed_forget));
+	//XLogRegisterData((char *) &xlrec, sizeof(xl_xact_distributed_forget));
+	XLogRegisterData((char *) &xlrec, MinSizeOfXactDistributedForget);
+	XLogRegisterData((char *) segment_ids,
+						 (xlrec.cnt_segments) * sizeof(int));
 
 	XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_FORGET);
+	fclose(f);
 }
 
 /*

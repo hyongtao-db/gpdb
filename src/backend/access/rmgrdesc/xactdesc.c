@@ -154,6 +154,10 @@ ParseDistributedForgetRecord(uint8 info, xl_xact_distributed_forget *xlrec, xl_x
 {
 	parsed->gxid = xlrec->gxid;
 	parsed->cnt_segments = xlrec->cnt_segments;
+	for(int i = 0; i < parsed->cnt_segments; ++i)
+	{
+		parsed->segment_ids[i] = xlrec->segment_ids[i];
+	}
 }
 
 void
