@@ -68,7 +68,7 @@ static void message_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 							   XLogRecPtr message_lsn, bool transactional,
 							   const char *prefix, Size message_size, const char *message);
 
-static void distributed_forget_cb_wrapper(ReorderBuffer *cache, DistributedTransactionId gxid, int cnt_segments, int segment_ids[3]);
+static void distributed_forget_cb_wrapper(ReorderBuffer *cache, DistributedTransactionId gxid, int cnt_segments, int* segment_ids);
 
 static void LoadOutputPlugin(OutputPluginCallbacks *callbacks, char *plugin);
 
@@ -724,7 +724,7 @@ commit_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 	error_context_stack = errcallback.previous;
 }
 
-static void distributed_forget_cb_wrapper(ReorderBuffer *cache, DistributedTransactionId gxid, int cnt_segments, int segment_ids[3])
+static void distributed_forget_cb_wrapper(ReorderBuffer *cache, DistributedTransactionId gxid, int cnt_segments, int* segment_ids)
 {
 	LogicalDecodingContext *ctx = cache->private_data;
 	//LogicalErrorCallbackState state;

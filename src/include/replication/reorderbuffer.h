@@ -333,7 +333,7 @@ typedef void (*ReorderBufferMessageCB) (
 
 typedef void (*ReorderBufferDistributedForgetCB) (
 										ReorderBuffer *rb,
-										DistributedTransactionId gxid, int cnt_segments, int segment_ids[3]);										
+										DistributedTransactionId gxid, int cnt_segments, int* segment_ids);										
 
 struct ReorderBuffer
 {
@@ -423,7 +423,7 @@ void		ReorderBufferQueueMessage(ReorderBuffer *, TransactionId, Snapshot snapsho
 void		ReorderBufferCommit(ReorderBuffer *, TransactionId,
 								XLogRecPtr commit_lsn, XLogRecPtr end_lsn,
 								TimestampTz commit_time, RepOriginId origin_id, XLogRecPtr origin_lsn, DistributedTransactionId gxid, bool is_one_phase);
-void		ReorderBufferDistributedForget(ReorderBuffer *rb, DistributedTransactionId gxid, int cnt_segments, int segment_ids[3]);
+void		ReorderBufferDistributedForget(ReorderBuffer *rb, DistributedTransactionId gxid, int cnt_segments, int* segment_ids);
 void		ReorderBufferAssignChild(ReorderBuffer *, TransactionId, TransactionId, XLogRecPtr commit_lsn);
 void		ReorderBufferCommitChild(ReorderBuffer *, TransactionId, TransactionId,
 									 XLogRecPtr commit_lsn, XLogRecPtr end_lsn);

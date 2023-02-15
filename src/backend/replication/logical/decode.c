@@ -79,7 +79,7 @@ static void DecodeXLogTuple(char *data, Size len, ReorderBufferTupleBuf *tup);
 
 static void DecodeDistributedForget(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 			                        xl_xact_parsed_distributed_forget *parsed, 
-						            DistributedTransactionId gxid, int cnt_segments, int segment_ids[3]);
+						            DistributedTransactionId gxid, int cnt_segments, int* segment_ids);
 
 /*
  * Take every XLogReadRecord()ed record and perform the actions required to
@@ -681,7 +681,7 @@ DecodeCommit(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 
 static void
 DecodeDistributedForget(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
-			 xl_xact_parsed_distributed_forget *parsed, DistributedTransactionId gxid, int cnt_segments, int segment_ids[3])
+			 xl_xact_parsed_distributed_forget *parsed, DistributedTransactionId gxid, int cnt_segments, int* segment_ids)
 {
 	ReorderBufferDistributedForget(ctx->reorder, gxid, cnt_segments, segment_ids);
 }

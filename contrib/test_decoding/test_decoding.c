@@ -68,7 +68,7 @@ static void pg_decode_message(LogicalDecodingContext *ctx,
 							  Size sz, const char *message);
 
 static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
-										 DistributedTransactionId gxid, int cnt_segments, int segment_ids[3]);
+										 DistributedTransactionId gxid, int cnt_segments, int* segment_ids);
 
 void
 _PG_init(void)
@@ -278,7 +278,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 }
 
 static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
-										 DistributedTransactionId gxid, int cnt_segments, int segment_ids[3])
+										 DistributedTransactionId gxid, int cnt_segments, int* segment_ids)
 {
 	TestDecodingData *data = ctx->output_plugin_private;
 
