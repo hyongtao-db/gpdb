@@ -661,10 +661,6 @@ GetStableLatestTransactionId(void)
 static void
 AssignTransactionId(TransactionState s)
 {
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "in AssignTransactionId\n");
-	fclose(f);
-
 	bool		isSubXact = (s->parent != NULL);
 	ResourceOwner currentOwner;
 	bool		log_unknown_top = false;
@@ -1798,8 +1794,6 @@ cleanup:
 void
 RecordDistributedForgetCommitted(DistributedTransactionId gxid)
 {
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "in RecordDistributedForgetCommitted\n");
 	xl_xact_distributed_forget xlrec;
 
 	xlrec.gxid = gxid;
@@ -1811,9 +1805,7 @@ RecordDistributedForgetCommitted(DistributedTransactionId gxid)
 	foreach_with_count(lc, MyTmGxactLocal->dtxSegments, i)
 	{
 		segment_ids[i] = lfirst_int(lc);
-		fprintf(f, "%d ", segment_ids[i]);
 	}
-	fprintf(f, "\n");
 
 	XLogBeginInsert();
 	//XLogRegisterData((char *) &xlrec, sizeof(xl_xact_distributed_forget));
@@ -1822,7 +1814,6 @@ RecordDistributedForgetCommitted(DistributedTransactionId gxid)
 						 (xlrec.cnt_segments) * sizeof(int));
 
 	XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_FORGET);
-	fclose(f);
 }
 
 /*

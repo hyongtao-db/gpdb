@@ -63,18 +63,91 @@ static StringInfoData output_message;
 static StringInfoData reply_message;
 static StringInfoData tmpbuf;
 
-#define MAX_SEGMENTS_COUNT 3
-PGconn* conn[MAX_SEGMENTS_COUNT];
-char* ports[MAX_SEGMENTS_COUNT];
+#define MAX_SEGMENTS_COUNT 100
+PGconn* conns[MAX_SEGMENTS_COUNT + 1];
+char* ports[MAX_SEGMENTS_COUNT + 1];
 
 bool CONN_INITED = false;
 
 static void CreateReplicationSlot(CreateReplicationSlotCmd *cmd);
 
-static void//正常是需要获取地址加port的，这里暂时只处理port
+static char**//正常是需要获取地址加port的，这里暂时只处理port
 GetPorts()
 {
+	ports[0] = "15432";
 
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in GetPorts\n");
+
+	char query[256];
+	PGresult* res = NULL;
+
+	const char** keywords;
+	const char** values;
+
+	keywords = palloc0((4 + 1) * sizeof(*keywords));
+	values = palloc0((4 + 1) * sizeof(*values));
+	keywords[0] = "port";
+	values[0] = "15432";
+	keywords[1] = "hostaddr";
+	values[1] = "127.0.0.1";
+	keywords[2] = "dbname";
+	values[2] = "testdb";
+	keywords[3] = "user";
+	values[3] = "gpadmin";
+
+	PGconn* conn = PQconnectdbParams(keywords, values, true);
+	if (!conn)
+	{
+		fprintf(f, "connect error1\n");
+		fclose(f);
+		return;
+	}
+
+	if (PQstatus(conn) != CONNECTION_OK)
+	{
+		fprintf(f, "connect error2\n");
+		fclose(f);
+		return;
+	}
+
+	snprintf(query, sizeof(query), "select * from gp_segment_configuration;");
+	fprintf(f, "command:%s\n", query);
+
+	res = PQexec(conn, query);
+	fprintf(f, "PQexec res:%d\n", PQresultStatus(res));
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK)
+	{
+		fprintf(f, "exec error\n");
+		fclose(f);
+		PQfinish(conn);
+		return;
+	}
+
+	int n = PQntuples(res);
+	fprintf(f, "tuple cnt:%d, attrnums:%d\n", n, res->numAttributes);
+
+	char* v = NULL;
+
+	for (int i = 1; i <= n; i++)//for now
+	{
+		v = PQgetvalue(res, i, 6);//remember free
+		if(v)
+		{
+			fprintf(f, "%s\n", v);
+			//keywords = palloc0((4 + 1) * sizeof(*keywords));
+			//ports[i] = v;
+			ports[i] = palloc0(strlen(v) + 1);
+			strcpy(ports[i], v);
+			fprintf(f, "%s\n", ports[i]);
+		}
+		else 
+			fprintf(f, "null \n");
+	}
+
+	PQfinish(conn);
+	fclose(f);
 }
 
 static void
@@ -91,7 +164,6 @@ InitConn(const char* port, int i)
 	
 	keywords[0] = "port";
 	values[0] = port;
-	//values[0] = "7000";
 	keywords[1] = "hostaddr";
 	values[1] = "127.0.0.1";
 	keywords[2] = "dbname";
@@ -99,7 +171,8 @@ InitConn(const char* port, int i)
 	keywords[3] = "user";
 	values[3] = "gpadmin";
 	keywords[4] = "replication";
-	values[4] = "database";
+	if(i == 0)values[4] = "master";
+	else values[4] = "database";
 
 /*
 	for (int i = 0; i < 3; ++i)
@@ -121,15 +194,15 @@ InitConn(const char* port, int i)
 		fprintf(f, "port:%s, i:%d\n", values[0], i);
 		if(i > 3)break;
 */
-		conn[i] = PQconnectdbParams(keywords, values, true);
-		if (!conn[i])
+		conns[i] = PQconnectdbParams(keywords, values, true);
+		if (!conns[i])
 		{
 			fprintf(f, "connect error1, conn num:%d\n", i);
 			fclose(f);
 			return;
 		}
 
-		if (PQstatus(conn[i]) != CONNECTION_OK)
+		if (PQstatus(conns[i]) != CONNECTION_OK)
 		{
 			fprintf(f, "connect error2, conn num:%d\n", i);
 			fclose(f);
@@ -151,30 +224,37 @@ DispatchCommand(char* query)
 static void
 CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 {
+	GetPorts();
+
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
 	fprintf(f, "in CreateReplicationSlot\n");
 
 	char query[256];
 	PGresult* res = NULL;
 
+	fprintf(f, "%s,%s,%s\n", ports[1], ports[2], ports[3]);
 	//if(!CONN_INITED)InitConn();
-	InitConn("7000", 0);
-	InitConn("7001", 1);
-	InitConn("7002", 2);
+	//InitConn("7000", 1);
+	//InitConn("7001", 2);
+	//InitConn("7002", 3);
+	InitConn(ports[0], 0);
+	InitConn(ports[1], 1);
+	InitConn(ports[2], 2);
+	InitConn(ports[3], 3);
 
 	snprintf(query, sizeof(query), "CREATE_REPLICATION_SLOT \"%s\" LOGICAL \"test_decoding\"",
 				 cmd->slotname);
 	fprintf(f, "command:%s\n", query);
 
-	for(int i = 0; i < 3; ++i)
+	for(int i = 0; i <= 3; ++i)
 	{
-		res = PQexec(conn[i], query);//注意res空间回收
+		res = PQexec(conns[i], query);//注意res空间回收
 		fprintf(f, "PQexec res:%d, i:%d\n", PQresultStatus(res), i);
 
 		if (PQresultStatus(res) != PGRES_TUPLES_OK)
 		{
-			fprintf(f, "exec error:%s\n", PQerrorMessage(conn[i]));
-			PQfinish(conn[i]);
+			fprintf(f, "exec error:%s\n", PQerrorMessage(conns[i]));
+			PQfinish(conns[i]);
 			break;
 		}
 	}
@@ -320,23 +400,18 @@ StartLogicalReplication(StartReplicationCmd *cmd)//理论上我要给controller�
 	char query[256];
 	PGresult* res = NULL;
 
-	//if(!CONN_INITED)InitConn();
-	//InitConn("7000", 0);
-	//InitConn("7001", 1);
-	//InitConn("7002", 2);
-
 	snprintf(query, sizeof(query), "START_REPLICATION SLOT \"slot\" LOGICAL 0/0");
 	fprintf(f, "command:%s\n", query);
 
-	for(int i = 0; i < 3; ++i)
+	for(int i = 0; i <= 3; ++i)
 	{
-		res = PQexec(conn[i], query);//注意res空间回收
+		res = PQexec(conns[i], query);//注意res空间回收
 		fprintf(f, "PQexec res:%d, i:%d\n", PQresultStatus(res), i);
 
 		if (PQresultStatus(res) != PGRES_COPY_BOTH)
 		{
-			fprintf(f, "exec error:%s\n", PQerrorMessage(conn[i]));
-			PQfinish(conn[i]);
+			fprintf(f, "exec error:%s\n", PQerrorMessage(conns[i]));
+			PQfinish(conns[i]);
 			break;
 		}
 	}

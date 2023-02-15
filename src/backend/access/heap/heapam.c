@@ -2057,10 +2057,6 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 		xlrec.gxid = get_gxid();
 		xlrec.segment_id = GpIdentity.segindex;
 
-		FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-		fprintf(f, "in heap_insert, gxid:%d, segmentid:%d\n", xlrec.gxid, xlrec.segment_id);
-		fclose(f);
-
 		XLogBeginInsert();
 		XLogRegisterData((char *) &xlrec, SizeOfHeapInsert);
 

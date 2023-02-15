@@ -266,7 +266,6 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 						 timestamptz_to_str(txn->commit_time));
 
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "commit data len:%d\n", ctx->out->len);
 	for(int i = 0; i < ctx->out->len; ++i)
 	{
 		fprintf(f, "%c", ctx->out->data[i]);
@@ -283,23 +282,16 @@ static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
 	TestDecodingData *data = ctx->output_plugin_private;
 
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	//fprintf(f, "%d:test_decoding, call back:%ld\n", getpid(), gxid);
 
 	//这两行可别对我们造成什么影响
 	data->xact_wrote_changes = false;
 	if (data->skip_empty_xacts)
 		return;
 
-	//fprintf(f, "%d:test_decoding, pass the return:%ld\n", getpid(), gxid);
-
 	//这里我就跟上边保持一样了，理论上不会有
 	OutputPluginPrepareWrite(ctx, true);//推测2参是本次调用这里是否是最后一写。
 	
-	appendStringInfo(ctx->out, "DISTRIBUTED FORGET %ld ", gxid);
-	//appendStringInfo(ctx->out, " count of segments:%d", cnt_segments);
-	
-	fprintf(f, "segment cnt:%d\n", cnt_segments);
-	//fprintf(f, "segment value:%d\n", segment_ids[0]);
+	appendStringInfo(ctx->out, "DISTRIBUTED FORGET %ld ", gxid);	
 	
 	for(int i = 0; i < cnt_segments-1; ++i)
 	{
