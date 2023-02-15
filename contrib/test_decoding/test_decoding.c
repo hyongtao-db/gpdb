@@ -259,18 +259,17 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	}
 
 	appendStringInfo(ctx->out, " gxid:%ld", txn->gxid);
+	appendStringInfo(ctx->out, " segmentid:%d", GpIdentity.segindex);
 
 	if (data->include_timestamp)
 		appendStringInfo(ctx->out, " (at %s)",
 						 timestamptz_to_str(txn->commit_time));
 
-	char tmp[2000];
-	//memcpy(tmp, ctx->out->data, ctx->out->len+1);
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
 	fprintf(f, "commit data len:%d\n", ctx->out->len);
 	for(int i = 0; i < ctx->out->len; ++i)
 	{
-		//fprintf(f, "%c", tmp[i]);
+		fprintf(f, "%c", ctx->out->data[i]);
 	}
 	fprintf(f, "\n");
 	fclose(f);
@@ -601,6 +600,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 	OutputPluginPrepareWrite(ctx, true);
 
+	appendStringInfo(ctx->out, "gxid:%lld ", change->gxid);
+	appendStringInfo(ctx->out, "segmentid:%d ", change->segment_id);
+
 	appendStringInfoString(ctx->out, "table ");
 	appendStringInfoString(ctx->out,
 						   quote_qualified_identifier(
@@ -659,23 +661,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
 
-	StringInfo sendKafkaValue = get_delimited_data(relation, change, txn);
-	//sendKafkaValue->data, sendKafkaValue->len
+	//StringInfo sendKafkaValue = get_delimited_data(relation, change, txn);
 
-	char tmp[2000];
-	memcpy(tmp, ctx->out->data, ctx->out->len+1);
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "change data len:%d\n", ctx->out->len);
-	fprintf(f, "segid:%d\n", GpIdentity.segindex);
-	/*
 	for(int i = 0; i < ctx->out->len; ++i)
 	{
-		fprintf(f, "%c", tmp[i]);
-	}
-	*/
-	for(int i = 0; i < sendKafkaValue->len; ++i)
-	{
-		fprintf(f, "%c", sendKafkaValue->data[i]);
+		fprintf(f, "%c", ctx->out->data[i]);
 	}
 	fprintf(f, "\n");
 	fclose(f);

@@ -151,6 +151,8 @@ typedef struct xl_heap_header
 /* This is what we need to know about insert */
 typedef struct xl_heap_insert
 {
+	DistributedTransactionId gxid;
+	int segment_id;
 	OffsetNumber offnum;		/* inserted tuple's offset */
 	uint8		flags;
 

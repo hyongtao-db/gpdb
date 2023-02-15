@@ -148,6 +148,9 @@ typedef struct ReorderBufferChange
 	 * otherwise it's the preallocated list.
 	 */
 	dlist_node	node;
+
+	DistributedTransactionId gxid;
+	int segment_id;
 } ReorderBufferChange;
 
 typedef struct ReorderBufferTXN

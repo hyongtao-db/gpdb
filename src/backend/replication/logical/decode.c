@@ -723,6 +723,10 @@ DecodeInsert(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 
 	xlrec = (xl_heap_insert *) XLogRecGetData(r);
 
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in DecodeInsert, gxid:%d, segmentid:%d\n", xlrec->gxid, xlrec->segment_id);
+	fclose(f);
+
 	/*
 	 * Ignore insert records without new tuples (this does happen when
 	 * raw_heap_insert marks the TOAST record as HEAP_INSERT_NO_LOGICAL).
@@ -757,6 +761,8 @@ DecodeInsert(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	DecodeXLogTuple(tupledata, datalen, change->data.tp.newtuple);
 
 	change->data.tp.clear_toast_afterwards = true;
+	change->gxid = xlrec->gxid;
+	change->segment_id = xlrec->segment_id;
 
 	ReorderBufferQueueChange(ctx->reorder, XLogRecGetXid(r), buf->origptr, change);
 }

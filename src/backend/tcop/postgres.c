@@ -232,6 +232,11 @@ static StringInfoData row_description_buf;
 
 static DtxContextInfo TempDtxContextInfo = DtxContextInfo_StaticInit;
 
+DistributedTransactionId get_gxid()
+{
+	return TempDtxContextInfo.distributedXid;
+}
+
 /* ----------------------------------------------------------------
  *		decls for routines only used in this file
  * ----------------------------------------------------------------
