@@ -683,7 +683,7 @@ static void
 DecodeDistributedForget(LogicalDecodingContext *ctx, XLogRecordBuffer *buf,
 			 xl_xact_parsed_distributed_forget *parsed, DistributedTransactionId gxid, int cnt_segments, int segment_ids[3])
 {
-	ReorderBufferDistributedForget(ctx->reorder, gxid, cnt_segments, segment_ids[3]);
+	ReorderBufferDistributedForget(ctx->reorder, gxid, cnt_segments, segment_ids);
 }
 
 /*

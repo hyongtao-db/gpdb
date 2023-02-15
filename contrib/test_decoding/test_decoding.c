@@ -299,14 +299,14 @@ static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
 	//appendStringInfo(ctx->out, " count of segments:%d", cnt_segments);
 	
 	fprintf(f, "segment cnt:%d\n", cnt_segments);
-	fprintf(f, "segment value:%d\n", segment_ids[0]);
-	/*
+	//fprintf(f, "segment value:%d\n", segment_ids[0]);
+	
 	for(int i = 0; i < cnt_segments-1; ++i)
 	{
 		appendStringInfo(ctx->out, "segment %d,", segment_ids[i]);
 	}
 	appendStringInfo(ctx->out, "segment %d", segment_ids[cnt_segments-1]);
-	*/
+	
 
 	for(int i = 0; i < ctx->out->len; ++i)
 	{

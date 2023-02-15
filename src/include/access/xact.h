@@ -401,7 +401,7 @@ typedef struct xl_xact_parsed_distributed_forget
 {
 	DistributedTransactionId gxid;
 	int cnt_segments;
-	int segment_ids[FLEXIBLE_ARRAY_MEMBER];
+	int* segment_ids;
 } xl_xact_parsed_distributed_forget;
 
 /* ----------------

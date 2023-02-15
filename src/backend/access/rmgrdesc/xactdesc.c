@@ -152,12 +152,27 @@ ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *pars
 void
 ParseDistributedForgetRecord(uint8 info, xl_xact_distributed_forget *xlrec, xl_xact_parsed_distributed_forget *parsed)
 {
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in ParseDistributedForgetRecord segment ids:");
+	char* data = ((char *) xlrec) + MinSizeOfXactDistributedForget;
+
 	parsed->gxid = xlrec->gxid;
 	parsed->cnt_segments = xlrec->cnt_segments;
+	/*
+	for(int i = 0; i < parsed->cnt_segments; ++i, data += sizeof(int))
+	{
+		parsed->segment_ids[i] = *((int*)data);
+		fprintf(f, "%d ", parsed->segment_ids[i]);
+	}
+	fprintf(f, "\n");
+	*/
+	parsed->segment_ids = (int*)data;
 	for(int i = 0; i < parsed->cnt_segments; ++i)
 	{
-		parsed->segment_ids[i] = xlrec->segment_ids[i];
+		fprintf(f, "%d ", parsed->segment_ids[i]);
 	}
+	fprintf(f, "\n");
+	fclose(f);
 }
 
 void
