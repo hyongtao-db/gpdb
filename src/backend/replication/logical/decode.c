@@ -830,6 +830,8 @@ DecodeUpdate(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	}
 
 	change->data.tp.clear_toast_afterwards = true;
+	change->gxid = xlrec->gxid;
+	change->segment_id = xlrec->segment_id;
 
 	ReorderBufferQueueChange(ctx->reorder, XLogRecGetXid(r), buf->origptr, change);
 }
@@ -887,6 +889,8 @@ DecodeDelete(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	}
 
 	change->data.tp.clear_toast_afterwards = true;
+	change->gxid = xlrec->gxid;
+	change->segment_id = xlrec->segment_id;
 
 	ReorderBufferQueueChange(ctx->reorder, XLogRecGetXid(r), buf->origptr, change);
 }
