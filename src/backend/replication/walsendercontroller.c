@@ -193,12 +193,6 @@ InitOneConn(int i)
 	return;
 }
 
-static void
-DispatchCommand(char* query)
-{
-
-}
-
 void InitConns()
 {
 	if(CONN_INITED)return;
@@ -214,6 +208,30 @@ void InitConns()
 }
 
 static void
+DispatchCommand(char* query, ExecStatusType success_ret)
+{
+	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
+	fprintf(f, "in DispatchCommand\n");
+
+	PGresult* res = NULL;
+
+	for(int i = 0; i < cnt_conns; ++i)
+	{
+		res = PQexec(conns[i], query);//注意res空间回收
+		fprintf(f, "PQexec res:%d, i:%d\n", PQresultStatus(res), i);
+
+		if (PQresultStatus(res) != success_ret)
+		{
+			fprintf(f, "exec error:%s\n", PQerrorMessage(conns[i]));
+			PQfinish(conns[i]);
+			break;
+		}
+	}
+
+	fclose(f);
+}
+
+static void
 CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 {
 	InitConns();
@@ -222,24 +240,12 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 	fprintf(f, "in CreateReplicationSlot\n");
 
 	char query[256];
-	PGresult* res = NULL;
 
 	snprintf(query, sizeof(query), "CREATE_REPLICATION_SLOT \"%s\" LOGICAL \"test_decoding\"",
 				 cmd->slotname);
 	fprintf(f, "command:%s\n", query);
 
-	for(int i = 0; i <= 3; ++i)
-	{
-		res = PQexec(conns[i], query);//注意res空间回收
-		fprintf(f, "PQexec res:%d, i:%d\n", PQresultStatus(res), i);
-
-		if (PQresultStatus(res) != PGRES_TUPLES_OK)
-		{
-			fprintf(f, "exec error:%s\n", PQerrorMessage(conns[i]));
-			PQfinish(conns[i]);
-			break;
-		}
-	}
+	DispatchCommand(query, PGRES_TUPLES_OK);
 
 /*
 	GpSegConfigEntry *segCnfInfo = NULL;
@@ -264,79 +270,7 @@ StartLogicalReplication(StartReplicationCmd *cmd)//理论上我要给controller�
 	snprintf(query, sizeof(query), "START_REPLICATION SLOT \"%s\" LOGICAL 0/0", cmd->slotname);
 	fprintf(f, "command:%s\n", query);
 
-	for(int i = 0; i <= 3; ++i)
-	{
-		res = PQexec(conns[i], query);//注意res空间回收
-		fprintf(f, "PQexec res:%d, i:%d\n", PQresultStatus(res), i);
-
-		if (PQresultStatus(res) != PGRES_COPY_BOTH)
-		{
-			fprintf(f, "exec error:%s\n", PQerrorMessage(conns[i]));
-			PQfinish(conns[i]);
-			break;
-		}
-	}
-
-/*
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	fprintf(f, "in CreateReplicationSlot\n");
-
-	const char** keywords;
-	const char** values;
-	PGresult* res = NULL;
-	PGconn* conn = NULL;
-	char query[256];
-
-
-	keywords = palloc0((5 + 1) * sizeof(*keywords));
-	values = palloc0((5 + 1) * sizeof(*values));
-	keywords[0] = "replication";
-	values[0] = "database";
-	keywords[1] = "port";
-	values[1] = "15432";
-	keywords[2] = "hostaddr";
-	values[2] = "127.0.0.1";
-	keywords[3] = "dbname";
-	values[3] = "testdb";
-	keywords[4] = "user";
-	values[4] = "gpadmin";
-
-
-	conn = PQconnectdbParams(keywords, values, true);
-	if (!conn)
-	{
-		fprintf(f, "connect error1\n");
-		fclose(f);
-		return;
-	}
-
-	if (PQstatus(conn) != CONNECTION_OK)
-	{
-		fprintf(f, "connect error2\n");
-		fclose(f);
-		return;
-	}
-
-	snprintf(query, sizeof(query), "START_REPLICATION SLOT \"slot\"");
-	fprintf(f, "command:%s\n", query);
-
-	res = PQexec(conn, query);
-	fprintf(f, "PQexec res:%d\n", PQresultStatus(res));
-
-	if (PQresultStatus(res) != PGRES_TUPLES_OK)
-	{
-		fprintf(f, "exec error\n");
-		fclose(f);
-		PQfinish(conn);
-		return;
-	}
-
-
-	//接收controller的回复，然后把lsn回复给特定segment
-
-	//
-
-*/
+	DispatchCommand(query, PGRES_COPY_BOTH);
 
 	fclose(f);
 }
@@ -355,19 +289,7 @@ DropReplicationSlot(DropReplicationSlotCmd *cmd)
 	snprintf(query, sizeof(query), "DROP_REPLICATION_SLOT %s", cmd->slotname);
 	fprintf(f, "command:%s\n", query);
 
-	for(int i = 0; i <= 3; ++i)
-	{
-		res = PQexec(conns[i], query);//注意res空间回收
-		fprintf(f, "PQexec res:%d, i:%d\n", PQresultStatus(res), i);
-
-		if (PQresultStatus(res) != PGRES_COMMAND_OK)
-		{
-			fprintf(f, "exec error:%s\n", PQerrorMessage(conns[i]));
-			PQfinish(conns[i]);
-			break;
-		}
-
-	}
+	DispatchCommand(query, PGRES_COMMAND_OK);
 
 	fclose(f);
 }
