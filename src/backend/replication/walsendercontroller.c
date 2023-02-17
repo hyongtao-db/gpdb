@@ -57,7 +57,7 @@
 #include "cdb/cdbutil.h"
 #include "replication/gp_replication.h"
 
-bool		am_walsender_controller = false;
+bool am_walsender_controller = false;
 
 static StringInfoData output_message;
 static StringInfoData reply_message;
@@ -239,6 +239,19 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
 	fprintf(f, "in CreateReplicationSlot\n");
 
+	LWLockAcquire(StartTransactionLock, LW_EXCLUSIVE);
+
+	List* gxids = ListAllGxid();
+	ListCell* cell;
+	foreach(cell, gxids)
+	{
+		DistributedTransactionId gxid = *((DistributedTransactionId*)lfirst(cell));
+		fprintf(f, "wait %lld\n", gxid);
+		fflush(f);
+		GxactLockTableWait(gxid);
+	}
+	fprintf(f, "wait end\n");
+
 	char query[256];
 
 	snprintf(query, sizeof(query), "CREATE_REPLICATION_SLOT \"%s\" LOGICAL \"test_decoding\"",
@@ -247,6 +260,7 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 
 	DispatchCommand(query, PGRES_TUPLES_OK);
 
+	LWLockRelease(StartTransactionLock);
 /*
 	GpSegConfigEntry *segCnfInfo = NULL;
 	segCnfInfo = dbid_get_dbinfo(1);
