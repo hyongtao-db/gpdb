@@ -21,10 +21,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
-
-#include "unistd.h"
-
-#include "cdb/cdbvars.h"
+#include "librdkafka/rdkafka.h"
 
 PG_MODULE_MAGIC;
 
@@ -67,13 +64,80 @@ static void pg_decode_message(LogicalDecodingContext *ctx,
 							  bool transactional, const char *prefix,
 							  Size sz, const char *message);
 
-static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
-										 DistributedTransactionId gxid, int cnt_segments, int* segment_ids);
+rd_kafka_t *rk;            /*Producer instance handle*/
+rd_kafka_topic_t *rkt;     /*topic对象*/
+const char *topic;
+const char *brokers;   
+
+/*
+    每条消息调用一次该回调函数，说明消息是传递成功(rkmessage->err == RD_KAFKA_RESP_ERR_NO_ERROR)
+    还是传递失败(rkmessage->err != RD_KAFKA_RESP_ERR_NO_ERROR)
+    该回调函数由rd_kafka_poll()触发，在应用程序的线程上执行
+ */
+static void dr_msg_cb(rd_kafka_t *rk,
+					  const rd_kafka_message_t *rkmessage, void *opaque){
+		if(rkmessage->err)
+			fprintf(stderr, "%% Message delivery failed: %s\n", 
+					rd_kafka_err2str(rkmessage->err));
+		else
+			fprintf(stderr,
+                        "%% Message delivered (%zd bytes, "
+                        "partition %"PRId32")\n",
+                        rkmessage->len, rkmessage->partition);
+        /* rkmessage被librdkafka自动销毁*/
+}
+
+
+static void init_librdkafka(){
+	rd_kafka_conf_t *conf;     /*临时配置对象*/
+	char errstr[512];          
+            
+ 	topic = "test";
+	brokers = "localhost:9092";
+	/* 创建一个kafka配置占位 */
+	conf = rd_kafka_conf_new();
+ 
+    /*创建broker集群*/
+	if (rd_kafka_conf_set(conf, "bootstrap.servers", brokers, errstr,
+				sizeof(errstr)) != RD_KAFKA_CONF_OK){
+		fprintf(stderr, "%s\n", errstr);
+		return;
+	}
+ 
+    /*设置发送报告回调函数，rd_kafka_produce()接收的每条消息都会调用一次该回调函数
+     *应用程序需要定期调用rd_kafka_poll()来服务排队的发送报告回调函数*/
+	rd_kafka_conf_set_dr_msg_cb(conf, dr_msg_cb);
+ 
+    /*创建producer实例
+      rd_kafka_new()获取conf对象的所有权,应用程序在此调用之后不得再次引用它*/
+	rk = rd_kafka_new(RD_KAFKA_PRODUCER, conf, errstr, sizeof(errstr));
+	if(!rk){
+		fprintf(stderr, "%% Failed to create new producer:%s\n", errstr);
+		return;
+	}
+ 
+    /*实例化一个或多个topics(`rd_kafka_topic_t`)来提供生产或消费，topic
+    对象保存topic特定的配置，并在内部填充所有可用分区和leader brokers，*/
+	rkt = rd_kafka_topic_new(rk, topic, NULL);
+	if (!rkt){
+		fprintf(stderr, "%% Failed to create topic object: %s\n", 
+				rd_kafka_err2str(rd_kafka_last_error()));
+		rd_kafka_destroy(rk);
+		return;
+	}
+
+	if (rd_kafka_produce(rkt, RD_KAFKA_PARTITION_UA, RD_KAFKA_MSG_F_COPY,
+         "init data", 10, NULL, 0, NULL) == -1) {
+		fprintf(stderr, "%% Failed to produce to topic %s: %s\n",
+		topic, rd_kafka_err2str(rd_kafka_errno2err(errno)));
+	}
+}
 
 void
 _PG_init(void)
 {
 	/* other plugins can perform things here */
+	init_librdkafka();
 }
 
 /* specify output plugin callbacks */
@@ -90,10 +154,7 @@ _PG_output_plugin_init(OutputPluginCallbacks *cb)
 	cb->filter_by_origin_cb = pg_decode_filter;
 	cb->shutdown_cb = pg_decode_shutdown;
 	cb->message_cb = pg_decode_message;
-
-	cb->distributed_forget_cb = pg_decode_distributed_forget;
 }
-
 
 /* initialize this plugin */
 static void
@@ -253,63 +314,11 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	else
 		appendStringInfoString(ctx->out, "COMMIT");
 
-	if(txn->is_one_phase)
-	{
-		appendStringInfo(ctx->out, " ONE_PHASE");
-	}
-
-	appendStringInfo(ctx->out, " gxid:%ld", txn->gxid);
-	appendStringInfo(ctx->out, " segmentid:%d", GpIdentity.segindex);
-
 	if (data->include_timestamp)
 		appendStringInfo(ctx->out, " (at %s)",
 						 timestamptz_to_str(txn->commit_time));
 
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	for(int i = 0; i < ctx->out->len; ++i)
-	{
-		fprintf(f, "%c", ctx->out->data[i]);
-	}
-	fprintf(f, "\n");
-	fclose(f);
-
 	OutputPluginWrite(ctx, true);
-}
-
-static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
-										 DistributedTransactionId gxid, int cnt_segments, int* segment_ids)
-{
-	TestDecodingData *data = ctx->output_plugin_private;
-
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-
-	//这两行可别对我们造成什么影响
-	data->xact_wrote_changes = false;
-	if (data->skip_empty_xacts)
-		return;
-
-	//这里我就跟上边保持一样了，理论上不会有
-	OutputPluginPrepareWrite(ctx, true);//推测2参是本次调用这里是否是最后一写。
-	
-	appendStringInfo(ctx->out, "DISTRIBUTED FORGET %ld ", gxid);	
-	
-	for(int i = 0; i < cnt_segments-1; ++i)
-	{
-		appendStringInfo(ctx->out, "segment %d,", segment_ids[i]);
-	}
-	appendStringInfo(ctx->out, "segment %d", segment_ids[cnt_segments-1]);
-	
-
-	for(int i = 0; i < ctx->out->len; ++i)
-	{
-		fprintf(f, "%c", ctx->out->data[i]);
-	}
-	fprintf(f, "\n");
-	//fprintf(f, "%s\n", ctx->out->data);
-
-	OutputPluginWrite(ctx, true);
-
-	fclose(f);
 }
 
 static bool
@@ -446,48 +455,6 @@ tuple_to_kafka_value(StringInfo s, TupleDesc tupdesc, HeapTuple tuple, bool skip
 	}
 }
 
-static StringInfo get_delimited_data(Relation relation, ReorderBufferChange *change, ReorderBufferTXN *txn)
-{
-	StringInfo sendKafkaValue = makeStringInfo();
-	Form_pg_class class_form = RelationGetForm(relation);
-	TupleDesc tupdesc = RelationGetDescr(relation);
-
-	// append scheme and table info
-	appendStringInfoString(sendKafkaValue,
-						   quote_qualified_identifier(
-													  get_namespace_name(
-																		 get_rel_namespace(RelationGetRelid(relation))),
-													  class_form->relrewrite ?
-													  get_rel_name(class_form->relrewrite) :
-													  NameStr(class_form->relname)));
-	appendStringInfoString(sendKafkaValue, "<*>");
-
-	// append action
-	if (change->action == REORDER_BUFFER_CHANGE_INSERT)
-	{
-		appendStringInfoString(sendKafkaValue, "insert<*>");
-	}
-	else if (change->action == REORDER_BUFFER_CHANGE_UPDATE)
-	{
-		appendStringInfoString(sendKafkaValue, "update<*>");
-	}
-	else if (change->action == REORDER_BUFFER_CHANGE_DELETE)
-	{
-		appendStringInfoString(sendKafkaValue, "delete<*>");
-	}
-
-	appendStringInfo(sendKafkaValue, "%X", txn->final_lsn);
-	appendStringInfoString(sendKafkaValue, "<*>");
-
-	// append data
-	if (change->data.tp.newtuple == NULL)
-		appendStringInfoString(sendKafkaValue, " (no-tuple-data)");
-	else
-		tuple_to_kafka_value(sendKafkaValue, tupdesc,
-							&change->data.tp.newtuple->tuple,
-							false);
-	return sendKafkaValue;
-}
 
 /* print the tuple 'tuple' into the StringInfo s */
 static void
@@ -563,6 +530,50 @@ tuple_to_stringinfo(StringInfo s, TupleDesc tupdesc, HeapTuple tuple, bool skip_
 	}
 }
 
+
+static StringInfo get_delimited_data(Relation relation, ReorderBufferChange *change, ReorderBufferTXN *txn)
+{
+	StringInfo sendKafkaValue = makeStringInfo();
+	Form_pg_class class_form = RelationGetForm(relation);
+	TupleDesc tupdesc = RelationGetDescr(relation);
+	
+	// append scheme and table info
+	appendStringInfoString(sendKafkaValue,
+						   quote_qualified_identifier(
+													  get_namespace_name(
+																		 get_rel_namespace(RelationGetRelid(relation))),
+													  class_form->relrewrite ?
+													  get_rel_name(class_form->relrewrite) :
+													  NameStr(class_form->relname)));
+	appendStringInfoString(sendKafkaValue, "<*>");
+
+	// append action
+	if (change->action == REORDER_BUFFER_CHANGE_INSERT)
+	{
+		appendStringInfoString(sendKafkaValue, "insert<*>");
+	}
+	else if (change->action == REORDER_BUFFER_CHANGE_UPDATE)
+	{
+		appendStringInfoString(sendKafkaValue, "update<*>");
+	}
+	else if (change->action == REORDER_BUFFER_CHANGE_DELETE)
+	{
+		appendStringInfoString(sendKafkaValue, "delete<*>");
+	}
+
+	appendStringInfo(sendKafkaValue, "%X", txn->final_lsn);
+	appendStringInfoString(sendKafkaValue, "<*>");
+
+	// append data
+	if (change->data.tp.newtuple == NULL)
+		appendStringInfoString(sendKafkaValue, " (no-tuple-data)");
+	else
+		tuple_to_kafka_value(sendKafkaValue, tupdesc,
+							&change->data.tp.newtuple->tuple,
+							false);
+	return sendKafkaValue;
+}
+
 /*
  * callback for individual changed tuples
  */
@@ -592,9 +603,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 	OutputPluginPrepareWrite(ctx, true);
 
-	appendStringInfo(ctx->out, "gxid:%lld ", change->gxid);
-	appendStringInfo(ctx->out, "segmentid:%d ", change->segment_id);
-
 	appendStringInfoString(ctx->out, "table ");
 	appendStringInfoString(ctx->out,
 						   quote_qualified_identifier(
@@ -604,6 +612,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 													  get_rel_name(class_form->relrewrite) :
 													  NameStr(class_form->relname)));
 	appendStringInfoChar(ctx->out, ':');
+
 
 	switch (change->action)
 	{
@@ -615,6 +624,14 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				tuple_to_stringinfo(ctx->out, tupdesc,
 									&change->data.tp.newtuple->tuple,
 									false);
+
+			StringInfo sendKafkaValue = get_delimited_data(relation, change, txn);
+
+			if (rd_kafka_produce(rkt, RD_KAFKA_PARTITION_UA, RD_KAFKA_MSG_F_COPY,
+				sendKafkaValue->data, sendKafkaValue->len, NULL, 0, NULL) == -1) {
+				fprintf(stderr, "%% Failed to produce to topic %s: %s\n",
+				topic, rd_kafka_err2str(rd_kafka_errno2err(errno)));
+			}
 			break;
 		case REORDER_BUFFER_CHANGE_UPDATE:
 			appendStringInfoString(ctx->out, " UPDATE:");
@@ -652,16 +669,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
-
-	//StringInfo sendKafkaValue = get_delimited_data(relation, change, txn);
-
-	FILE* f = fopen("/home/gpadmin/wangchonglog", "a");
-	for(int i = 0; i < ctx->out->len; ++i)
-	{
-		fprintf(f, "%c", ctx->out->data[i]);
-	}
-	fprintf(f, "\n");
-	fclose(f);
 
 	OutputPluginWrite(ctx, true);
 }
