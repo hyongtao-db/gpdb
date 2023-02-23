@@ -613,9 +613,13 @@ external_insert_init(Relation rel)
 	 * don't append to entry->options directly, we only store the encoding in
 	 * entry->encoding (and ftoptions)
 	 */
+	if (fmttype_is_custom(extentry->fmtcode))
+	{
+		copyFmtOpts = NIL;
+	}
 	copyFmtOpts = appendCopyEncodingOption(list_copy(extentry->options), extentry->encoding);
 
-	extInsertDesc->ext_pstate = BeginCopyToForeignTable(rel, (fmttype_is_custom(extentry->fmtcode) ? NIL : copyFmtOpts));
+	extInsertDesc->ext_pstate = BeginCopyToForeignTable(rel, copyFmtOpts);
 	InitParseState(extInsertDesc->ext_pstate,
 				   rel,
 				   true,
