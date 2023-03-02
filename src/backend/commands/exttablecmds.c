@@ -54,7 +54,7 @@ static List * GenerateExtTableEntryOptions(Oid tbloid,
 										   char logerrors,
 										   int encoding,
 										   char* locationExec,
-										   List* locationUris);
+										   List *locationUris);
 
 /* ----------------------------------------------------------------
 *		DefineExternalRelation
@@ -465,7 +465,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 							uri_str_final),
 					 errhint("Specify the explicit path and file name to write into.")));
 
-		urilist = lappend(urilist, uri_str_final);
+		urilist = lappend(urilist, makeString(uri_str_final));
 
 		FreeExternalTableUri(uri);
 		pfree(uri_str_final);
@@ -820,7 +820,7 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 							 char	logerrors,
 							 int	encoding,
 							 char*	locationExec,
-							 List*	locationUris)
+							 List  *locationUris)
 {
 	List		*entryOptions = NIL;
 
@@ -834,7 +834,6 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 	if (locationUris)
 	{
 		ListCell *lc;
-		bool first_uri = true;
 		foreach(lc, locationUris)
 		{
 			ObjectAddress	myself, referenced;
@@ -843,15 +842,8 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 			Size		position;
 
 			location = strVal(lfirst(lc));
-			if (first_uri)
-			{
-					appendStringInfo(&bufLocationUris, "%s", location);
-					first_uri = false;
-			}
-			else
-			{
-					appendStringInfo(&bufLocationUris, ",%s", location);
-			}
+			appendStringInfoString(&bufLocationUris, location);
+			
 			position = strchr(location, ':') - location;
 			protocol = pnstrdup(location, position);
 
