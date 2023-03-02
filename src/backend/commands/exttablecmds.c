@@ -38,7 +38,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbsreh.h"
 
-static char* transformLocationUris(List *locs, bool isweb, bool iswritable);
+static List * transformLocationUris(List *locs, bool isweb, bool iswritable);
 static char* transformExecOnClause(List *on_clause);
 static char transformFormatType(char *formatname);
 static List * transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable);
@@ -54,7 +54,7 @@ static List * GenerateExtTableEntryOptions(Oid tbloid,
 										   char logerrors,
 										   int encoding,
 										   char* locationExec,
-										   char* locationUris);
+										   List* locationUris);
 
 /* ----------------------------------------------------------------
 *		DefineExternalRelation
@@ -85,7 +85,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	Oid			reloid = 0;
 	List	   *formatOpts = NIL;
 	List	   *entryOptions = NIL;
-	char	   *locationUris = NULL;
+	List	   *locationUris = NIL;
 	char	   *locationExec = NULL;
 	char	   *commandString = NULL;
 	char		rejectlimittype = '\0';
@@ -335,18 +335,18 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
  * Transform the URI string list into a string. While at it we validate the URI
  * strings.
  */
-static char*
+static List *
 transformLocationUris(List *locs, bool isweb, bool iswritable)
 {
 	ListCell   *cell;
-	StringInfoData buf;
+	List 	   *urilist = NIL;
+	/* urilist = lappend(urilist, makeDefElem("uri", (Node *) makeString(xxx), -1)); */
+	/* makeDefElem("compresstype", (Node *) makeString(arg), -1); */
 	UriProtocol first_protocol = URI_FILE;		/* initialize to keep gcc
 												 * quiet */
 	bool		first_uri = true;
 
 #define FDIST_DEF_PORT 8080
-
-	initStringInfo(&buf);
 
 	/* Parser should not let this happen */
 	Assert(locs != NIL);
@@ -465,21 +465,13 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 							uri_str_final),
 					 errhint("Specify the explicit path and file name to write into.")));
 
-		if (first_uri)
-		{
-			appendStringInfo(&buf, "%s", uri_str_final);
-			first_uri = false;
-		}
-		else
-		{
-			appendStringInfo(&buf, "|%s", uri_str_final);
-		}
+		urilist = lappend(urilist, uri_str_final);
 
 		FreeExternalTableUri(uri);
 		pfree(uri_str_final);
 	}
 
-	return buf.data;
+	return urilist;
 }
 
 static char*
@@ -828,44 +820,22 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 							 char	logerrors,
 							 int	encoding,
 							 char*	locationExec,
-							 char*	locationUris)
+							 List*	locationUris)
 {
 	List		*entryOptions = NIL;
 
 	entryOptions = lappend(entryOptions, makeDefElem("format_type", (Node *) makeString(psprintf("%c", formattype)), -1));
 
-	if (commandString)
-	{
-		/* EXECUTE type table - store command and command location */
-		entryOptions = lappend(entryOptions, makeDefElem("command", (Node *) makeString(pstrdup(commandString)), -1));
-		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
-	}
-	else
-	{
-		/* LOCATION type table - store uri locations. command is NULL */
-		entryOptions = lappend(entryOptions, makeDefElem("location_uris", (Node *) makeString(pstrdup(locationUris)), -1));
-		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
-	}
-
-	if (issreh)
-	{
-		entryOptions = lappend(entryOptions, makeDefElem("reject_limit", (Node *) makeString(psprintf("%d", rejectlimit)), -1));
-		entryOptions = lappend(entryOptions, makeDefElem("reject_limit_type", (Node *) makeString(psprintf("%c", rejectlimittype)), -1));
-	}
-
-	entryOptions = lappend(entryOptions, makeDefElem("log_errors", (Node *) makeString(psprintf("%c", logerrors)), -1));
-	entryOptions = lappend(entryOptions, makeDefElem("encoding", (Node *) makeString(psprintf("%d", encoding)), -1));
-	entryOptions = lappend(entryOptions, makeDefElem("is_writable", (Node *) makeString(iswritable ? pstrdup("true") : pstrdup("false")), -1));
-
 	/*
 	 * Add the dependency of custom external table
 	 */
+	StringInfoData bufLocationUris;
+	initStringInfo(&bufLocationUris);
 	if (locationUris)
 	{
-		List *locationUris_list = TokenizeLocationUris(locationUris);
 		ListCell *lc;
-
-		foreach(lc, locationUris_list)
+		bool first_uri = true;
+		foreach(lc, locationUris)
 		{
 			ObjectAddress	myself, referenced;
 			char	   *location;
@@ -873,6 +843,15 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 			Size		position;
 
 			location = strVal(lfirst(lc));
+			if (first_uri)
+			{
+					appendStringInfo(&bufLocationUris, "%s", location);
+					first_uri = false;
+			}
+			else
+			{
+					appendStringInfo(&bufLocationUris, ",%s", location);
+			}
 			position = strchr(location, ':') - location;
 			protocol = pnstrdup(location, position);
 
@@ -892,6 +871,29 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 				recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 		}
 	}
+
+	if (commandString)
+	{
+		/* EXECUTE type table - store command and command location */
+		entryOptions = lappend(entryOptions, makeDefElem("command", (Node *) makeString(pstrdup(commandString)), -1));
+		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
+	}
+	else
+	{
+		/* LOCATION type table - store uri locations. command is NULL */
+		entryOptions = lappend(entryOptions, makeDefElem("location_uris", (Node *) makeString(pstrdup(bufLocationUris.data)), -1));
+		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
+	}
+
+	if (issreh)
+	{
+		entryOptions = lappend(entryOptions, makeDefElem("reject_limit", (Node *) makeString(psprintf("%d", rejectlimit)), -1));
+		entryOptions = lappend(entryOptions, makeDefElem("reject_limit_type", (Node *) makeString(psprintf("%c", rejectlimittype)), -1));
+	}
+
+	entryOptions = lappend(entryOptions, makeDefElem("log_errors", (Node *) makeString(psprintf("%c", logerrors)), -1));
+	entryOptions = lappend(entryOptions, makeDefElem("encoding", (Node *) makeString(psprintf("%d", encoding)), -1));
+	entryOptions = lappend(entryOptions, makeDefElem("is_writable", (Node *) makeString(iswritable ? pstrdup("true") : pstrdup("false")), -1));
 
 	return entryOptions;
 }
