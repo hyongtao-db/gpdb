@@ -465,7 +465,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 							uri_str_final),
 					 errhint("Specify the explicit path and file name to write into.")));
 
-		urilist = lappend(urilist, makeString(uri_str_final));
+		urilist = lappend(urilist, makeString(pstrdup(uri_str_final)));
 
 		FreeExternalTableUri(uri);
 		pfree(uri_str_final);
@@ -841,7 +841,7 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 			char	   *protocol;
 			Size		position;
 
-			location = strVal(lfirst(lc));
+			location = strVal(lfirst(lc)); /*这里怎么就返回空了？*/
 			appendStringInfoString(&bufLocationUris, location);
 			
 			position = strchr(location, ':') - location;
@@ -873,7 +873,7 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 	else
 	{
 		/* LOCATION type table - store uri locations. command is NULL */
-		entryOptions = lappend(entryOptions, makeDefElem("location_uris", (Node *) makeString(pstrdup(bufLocationUris.data)), -1));
+		entryOptions = lappend(entryOptions, makeDefElem("location_uris", (Node *) makeString(bufLocationUris.data), -1));
 		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
 	}
 
