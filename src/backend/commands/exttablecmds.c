@@ -831,6 +831,7 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 	 */
 	StringInfoData bufLocationUris;
 	initStringInfo(&bufLocationUris);
+	bool first_uri = true;
 	if (locationUris)
 	{
 		ListCell *lc;
@@ -841,8 +842,18 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 			char	   *protocol;
 			Size		position;
 
-			location = strVal(lfirst(lc)); /*这里怎么就返回空了？*/
-			appendStringInfoString(&bufLocationUris, location);
+			location = strVal(lfirst(lc));
+			// appendStringInfoString(&bufLocationUris, location);
+
+			if (first_uri)
+			{
+				appendStringInfo(&bufLocationUris, "%s", location);
+				first_uri = false;
+			}
+			else
+			{
+				appendStringInfo(&bufLocationUris, ",%s", location);
+			}
 			
 			position = strchr(location, ':') - location;
 			protocol = pnstrdup(location, position);
