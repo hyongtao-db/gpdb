@@ -38,7 +38,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbsreh.h"
 
-static char* transformLocationUris(List *locs, bool isweb, bool iswritable);
+static Datum transformLocationUris(List *locs, bool isweb, bool iswritable);
 static char* transformExecOnClause(List *on_clause);
 static char transformFormatType(char *formatname);
 static List * transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable);
@@ -54,7 +54,7 @@ static List * GenerateExtTableEntryOptions(Oid tbloid,
 										   char logerrors,
 										   int encoding,
 										   char* locationExec,
-										   char* locationUris);
+										   Datum locationUris);
 
 /* ----------------------------------------------------------------
 *		DefineExternalRelation
@@ -85,7 +85,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	Oid			reloid = 0;
 	List	   *formatOpts = NIL;
 	List	   *entryOptions = NIL;
-	char	   *locationUris = NULL;
+	Datum	   locationUris = 0;
 	char	   *locationExec = NULL;
 	char	   *commandString = NULL;
 	char		rejectlimittype = '\0';
@@ -332,24 +332,30 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 }
 
 /*
- * Transform the URI string list into a string. While at it we validate the URI
- * strings.
+ * Transform the URI string list into a text array (the form that is
+ * used in the catalog table pg_exttable). While at it we validate
+ * the URI strings.
+ *
+ * The result is a text array but we declare it as Datum to avoid
+ * including array.h in analyze.h.
  */
-static char*
+static Datum
 transformLocationUris(List *locs, bool isweb, bool iswritable)
 {
 	ListCell   *cell;
-	StringInfoData buf;
+	ArrayBuildState *astate;
+	Datum		result;
 	UriProtocol first_protocol = URI_FILE;		/* initialize to keep gcc
 												 * quiet */
 	bool		first_uri = true;
 
 #define FDIST_DEF_PORT 8080
 
-	initStringInfo(&buf);
-
 	/* Parser should not let this happen */
 	Assert(locs != NIL);
+
+	/* We build new array using accumArrayResult */
+	astate = NULL;
 
 	/*
 	 * iterate through the user supplied URI list from LOCATION clause.
@@ -421,6 +427,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 		if (first_uri)
 		{
 			first_protocol = uri->protocol;
+			first_uri = false;
 		}
 
 		if (uri->protocol != first_protocol)
@@ -465,22 +472,24 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 							uri_str_final),
 					 errhint("Specify the explicit path and file name to write into.")));
 
-		if (first_uri)
-		{
-			appendStringInfo(&buf, "%s", uri_str_final);
-			first_uri = false;
-		}
-		else
-		{
-			appendStringInfo(&buf, "|%s", uri_str_final);
-		}
+		astate = accumArrayResult(astate,
+								  CStringGetTextDatum(uri_str_final), false,
+								  TEXTOID,
+								  CurrentMemoryContext);
 
 		FreeExternalTableUri(uri);
 		pfree(uri_str_final);
 	}
 
-	return buf.data;
+	if (astate)
+		result = makeArrayResult(astate, CurrentMemoryContext);
+	else
+		result = (Datum) 0;
+
+	return result;
+
 }
+
 
 static char*
 transformExecOnClause(List *on_clause)
@@ -828,51 +837,44 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 							 char	logerrors,
 							 int	encoding,
 							 char*	locationExec,
-							 char*	locationUris)
+							 Datum	locationUris)
 {
-	List		*entryOptions = NIL;
-
+	List		   *entryOptions = NIL;
+	bool			first_uri = true;
+	StringInfoData	bufLocationUris;
+	initStringInfo(&bufLocationUris);
 	entryOptions = lappend(entryOptions, makeDefElem("format_type", (Node *) makeString(psprintf("%c", formattype)), -1));
-
-	if (commandString)
-	{
-		/* EXECUTE type table - store command and command location */
-		entryOptions = lappend(entryOptions, makeDefElem("command", (Node *) makeString(pstrdup(commandString)), -1));
-		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
-	}
-	else
-	{
-		/* LOCATION type table - store uri locations. command is NULL */
-		entryOptions = lappend(entryOptions, makeDefElem("location_uris", (Node *) makeString(pstrdup(locationUris)), -1));
-		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
-	}
-
-	if (issreh)
-	{
-		entryOptions = lappend(entryOptions, makeDefElem("reject_limit", (Node *) makeString(psprintf("%d", rejectlimit)), -1));
-		entryOptions = lappend(entryOptions, makeDefElem("reject_limit_type", (Node *) makeString(psprintf("%c", rejectlimittype)), -1));
-	}
-
-	entryOptions = lappend(entryOptions, makeDefElem("log_errors", (Node *) makeString(psprintf("%c", logerrors)), -1));
-	entryOptions = lappend(entryOptions, makeDefElem("encoding", (Node *) makeString(psprintf("%d", encoding)), -1));
-	entryOptions = lappend(entryOptions, makeDefElem("is_writable", (Node *) makeString(iswritable ? pstrdup("true") : pstrdup("false")), -1));
 
 	/*
 	 * Add the dependency of custom external table
 	 */
-	if (locationUris)
+	if (locationUris != (Datum) 0)
 	{
-		List *locationUris_list = TokenizeLocationUris(locationUris);
-		ListCell *lc;
+		Datum	   *elems;
+		int			nelems;
 
-		foreach(lc, locationUris_list)
+		deconstruct_array(DatumGetArrayTypeP(locationUris),
+						  TEXTOID, -1, false, 'i',
+						  &elems, NULL, &nelems);
+
+
+		for (int i = 0; i < nelems; i++)
 		{
 			ObjectAddress	myself, referenced;
 			char	   *location;
 			char	   *protocol;
 			Size		position;
 
-			location = strVal(lfirst(lc));
+			location = TextDatumGetCString(elems[i]);
+			if (first_uri)
+			{
+				appendStringInfo(&bufLocationUris, "%s", location);
+				first_uri = false;
+			}
+			else
+			{
+				appendStringInfo(&bufLocationUris, ",%s", location);
+			}
 			position = strchr(location, ':') - location;
 			protocol = pnstrdup(location, position);
 
@@ -892,6 +894,29 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 				recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 		}
 	}
+
+	if (commandString)
+	{
+		/* EXECUTE type table - store command and command location */
+		entryOptions = lappend(entryOptions, makeDefElem("command", (Node *) makeString(pstrdup(commandString)), -1));
+		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
+	}
+	else
+	{
+		/* LOCATION type table - store uri locations. command is NULL */
+		entryOptions = lappend(entryOptions, makeDefElem("location_uris", (Node *) makeString(bufLocationUris.data), -1));
+		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
+	}
+
+	if (issreh)
+	{
+		entryOptions = lappend(entryOptions, makeDefElem("reject_limit", (Node *) makeString(psprintf("%d", rejectlimit)), -1));
+		entryOptions = lappend(entryOptions, makeDefElem("reject_limit_type", (Node *) makeString(psprintf("%c", rejectlimittype)), -1));
+	}
+
+	entryOptions = lappend(entryOptions, makeDefElem("log_errors", (Node *) makeString(psprintf("%c", logerrors)), -1));
+	entryOptions = lappend(entryOptions, makeDefElem("encoding", (Node *) makeString(psprintf("%d", encoding)), -1));
+	entryOptions = lappend(entryOptions, makeDefElem("is_writable", (Node *) makeString(iswritable ? pstrdup("true") : pstrdup("false")), -1));
 
 	return entryOptions;
 }
