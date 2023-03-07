@@ -841,6 +841,7 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 {
 	List		   *entryOptions = NIL;
 	bool			first_uri = true;
+	Datum		result;
 	StringInfoData	bufLocationUris;
 	initStringInfo(&bufLocationUris);
 	entryOptions = lappend(entryOptions, makeDefElem("format_type", (Node *) makeString(psprintf("%c", formattype)), -1));
@@ -857,15 +858,21 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 						  TEXTOID, -1, false, 'i',
 						  &elems, NULL, &nelems);
 
-
+		ArrayBuildState *uriAstate;
 		for (int i = 0; i < nelems; i++)
 		{
 			ObjectAddress	myself, referenced;
 			char	   *location;
 			char	   *protocol;
 			Size		position;
+			
 
 			location = TextDatumGetCString(elems[i]);
+
+			uriAstate = accumArrayResult(uriAstate,
+							elems[i], false,
+							TEXTOID,
+							CurrentMemoryContext);
 			if (first_uri)
 			{
 				appendStringInfo(&bufLocationUris, "%s", location);
@@ -875,6 +882,8 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 			{
 				appendStringInfo(&bufLocationUris, ",%s", location);
 			}
+
+
 			position = strchr(location, ':') - location;
 			protocol = pnstrdup(location, position);
 
@@ -893,6 +902,10 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 			if (referenced.objectId)
 				recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 		}
+		if (uriAstate)
+			result = makeArrayResult(uriAstate, CurrentMemoryContext);
+		else
+			result = (Datum) 0;
 	}
 
 	if (commandString)

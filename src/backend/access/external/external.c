@@ -80,7 +80,7 @@ TokenizeLocationUris(char *uris)
 
 	Assert(uris != NULL);
 
-	while ((uri = strsep(&uris, "|")) != NULL)
+	while ((uri = strsep(&uris, ",")) != NULL)
 	{
 		result = lappend(result, makeString(uri));
 	}
