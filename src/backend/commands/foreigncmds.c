@@ -99,6 +99,40 @@ optionListToArray(List *options)
 }
 
 
+static Datum
+optionListToArrayFix(List *options)
+{
+	ArrayBuildState *astate = NULL;
+	ListCell   *cell;
+
+	foreach(cell, options)
+	{
+		DefElem    *def = lfirst(cell);
+		const char *value;
+		Size		len;
+		text	   *t;
+
+		if (def->arg->type != T_List)
+		{
+			value = defGetString(def);
+			len = VARHDRSZ + strlen(def->defname) + 1 + strlen(value);
+			t = palloc(len + 1);
+			SET_VARSIZE(t, len);
+			sprintf(VARDATA(t), "%s=%s", def->defname, value);
+
+			astate = accumArrayResult(astate, PointerGetDatum(t),
+									false, TEXTOID,
+									CurrentMemoryContext);
+		}
+	}
+
+	if (astate)
+		return makeArrayResult(astate, CurrentMemoryContext);
+
+	return PointerGetDatum(NULL);
+}
+
+
 /*
  * Transform a list of DefElem into text array format.  This is substantially
  * the same thing as optionListToArray(), except we recognize SET/ADD/DROP
@@ -185,7 +219,7 @@ transformGenericOptions(Oid catalogId,
 		}
 	}
 
-	result = optionListToArray(resultOptions);
+	result = optionListToArrayFix(resultOptions);
 
 	/*
 	 * Check and separate out the extra options, fdwvalidator doesn't have
@@ -198,7 +232,7 @@ transformGenericOptions(Oid catalogId,
 
 	if (OidIsValid(fdwvalidator))
 	{
-		Datum valarg = optionListToArray(resultOptions);
+		Datum valarg = optionListToArrayFix(resultOptions);
 
 		/*
 		 * Pass a null options list as an empty array, so that validators

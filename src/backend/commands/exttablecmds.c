@@ -849,6 +849,7 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 	/*
 	 * Add the dependency of custom external table
 	 */
+	List *lLocationUris = NIL;
 	if (locationUris != (Datum) 0)
 	{
 		Datum	   *elems;
@@ -882,7 +883,7 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 			{
 				appendStringInfo(&bufLocationUris, ",%s", location);
 			}
-
+			lLocationUris = lappend(lLocationUris, makeDefElem("uri", (Node *) makeString(pstrdup(bufLocationUris.data)), -1));
 
 			position = strchr(location, ':') - location;
 			protocol = pnstrdup(location, position);
@@ -917,7 +918,9 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 	else
 	{
 		/* LOCATION type table - store uri locations. command is NULL */
-		entryOptions = lappend(entryOptions, makeDefElem("location_uris", (Node *) makeString(bufLocationUris.data), -1));
+		entryOptions = lappend(entryOptions, makeDefElem("location_uris", lLocationUris, -1));
+		// entryOptions = lappend(entryOptions, makeDefElem("location_uris", lLocationUris, -1));
+		// entryOptions = lappend(entryOptions, makeDefElem("location_uris", (Node *) makeString(bufLocationUris.data), -1));
 		entryOptions = lappend(entryOptions, makeDefElem("execute_on", (Node *) makeString(pstrdup(locationExec)), -1));
 	}
 

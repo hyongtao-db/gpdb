@@ -189,7 +189,7 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 
 		if (pg_strcasecmp(def->defname, "location_uris") == 0)
 		{
-			extentry->urilocations = TokenizeLocationUris(defGetString(def));
+			extentry->urilocations = def->arg;
 			locationuris_found = true;
 			continue;
 		}
