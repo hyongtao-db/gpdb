@@ -80,9 +80,36 @@ TokenizeLocationUris(char *uris)
 
 	Assert(uris != NULL);
 
-	while ((uri = strsep(&uris, "|")) != NULL)
+	while ((uri = strsep(&uris, ",")) != NULL)
 	{
 		result = lappend(result, makeString(uri));
+	}
+
+	return result;
+}
+
+/* transform the locations string to a list */
+List*
+TokenizeLocationUrisMe(char *uris)
+{
+	char *uri = NULL;
+	List *result = NIL;
+
+	Assert(uris != NULL);
+
+	// 找到，第1个和第2个单引号，获取下标，且保证后面跟着一个分隔符逗号
+	// 循环寻找成对的单引号
+	// 直到最后一对，最后一对可以没有分隔符
+	while ((uri = strsep(&uris, "\'")) != NULL)
+	{
+		if (strcmp(uri, ",") == 0 || strcmp(uri, "") == 0)
+		{
+			
+		}
+		else
+		{
+			result = lappend(result, makeString(uri));
+		}
 	}
 
 	return result;
@@ -189,7 +216,7 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 
 		if (pg_strcasecmp(def->defname, "location_uris") == 0)
 		{
-			extentry->urilocations = TokenizeLocationUris(defGetString(def));
+			extentry->urilocations = TokenizeLocationUrisMe(defGetString(def));
 			locationuris_found = true;
 			continue;
 		}

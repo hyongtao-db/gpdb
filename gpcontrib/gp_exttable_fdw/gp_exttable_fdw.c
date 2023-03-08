@@ -412,7 +412,7 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 
 			if (pg_strcasecmp(def->defname, "location_uris") == 0)
 			{
-				List *location_list = TokenizeLocationUris(defGetString(def));
+				List *location_list = TokenizeLocationUrisMe(defGetString(def));
 				ListCell   *first_uri = list_head(location_list);
 				Value	   *v = lfirst(first_uri);
 				char	   *uri_str = pstrdup(v->val.str);

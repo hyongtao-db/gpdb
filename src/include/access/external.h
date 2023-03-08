@@ -41,6 +41,7 @@ typedef struct ExtTableEntry
 } ExtTableEntry;
 
 extern List * TokenizeLocationUris(char *locations);
+extern List * TokenizeLocationUrisMe(char *locations);
 
 extern ExtTableEntry *GetExtTableEntry(Oid relid);
 extern ExtTableEntry *GetExtTableEntryIfExists(Oid relid);
