@@ -467,13 +467,16 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 
 		if (first_uri)
 		{
-			appendStringInfo(&buf, "%s", uri_str_final);
 			first_uri = false;
 		}
 		else
 		{
-			appendStringInfo(&buf, "|%s", uri_str_final);
+			appendStringInfoChar(&buf, ',');
 		}
+
+		appendStringInfoChar(&buf, '\'');
+		appendStringInfo(&buf, "%s", uri_str_final);
+		appendStringInfoChar(&buf, '\'');
 
 		FreeExternalTableUri(uri);
 		pfree(uri_str_final);
