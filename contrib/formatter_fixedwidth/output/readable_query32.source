@@ -43,7 +43,7 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10');
  Column |     Type      | Collation | Nullable | Default | FDW options 
 --------+---------------+-----------+----------+---------+-------------
  s1     | character(10) |           |          |         | 
-FDW options: (formatter 'fixedwidth_in', s1 '10', format 'custom', format_type 'b', location_uris 'file://@hostname@@abs_srcdir@/data/fixedwidth_large_single_field.tbl', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (formatter 'fixedwidth_in', s1 '10', format 'custom', format_type 'b', location_uris "'file://@hostname@@abs_srcdir@/data/fixedwidth_large_single_field.tbl'", execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1 desc limit 10;
      s1     
