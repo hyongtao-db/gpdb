@@ -41,6 +41,12 @@ CREATE EXTERNAL TABLE EXT_NATION_MATCH  ( N_NATIONKEY  INTEGER ,
                             N_COMMENT    VARCHAR(152))
 location ('gpfdist://@hostname@:7070/exttab1/nation.tbl*' )
 FORMAT 'text' (delimiter '|');
+CREATE EXTERNAL TABLE EXT_NATION_SEPARATOR  ( N_NATIONKEY  INTEGER ,
+                            N_NAME       CHAR(25) ,
+                            N_REGIONKEY  INTEGER ,
+                            N_COMMENT    VARCHAR(152))
+location ('gpfdist://@hostname@:7070/exttab1/nation.tbl','gpfdist://@hostname@:7070/exttab1/nation.tbl.gz')
+FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL TABLE EXT_REGION  (LIKE REG_REGION)
 location ('gpfdist://@hostname@:7070/exttab1/region.tbl' )
 FORMAT 'text' (delimiter '|');
@@ -105,6 +111,12 @@ SELECT * FROM EXT_NATION_GZ;
 (25 rows)
 
 SELECT count(*) FROM EXT_NATION_MATCH;
+ count 
+-------
+    50
+(1 row)
+
+SELECT count(*) FROM EXT_NATION_SEPARATOR;
  count 
 -------
     50
@@ -222,6 +234,7 @@ select * from cat_sqlout_result;
 DROP EXTERNAL TABLE EXT_NATION;
 DROP EXTERNAL TABLE EXT_NATION_GZ;
 DROP EXTERNAL TABLE EXT_NATION_MATCH;
+DROP EXTERNAL TABLE EXT_NATION_SEPARATOR;
 DROP EXTERNAL TABLE EXT_REGION;
 --
 -- gpfdist in csv (mpp-1519, etc)
