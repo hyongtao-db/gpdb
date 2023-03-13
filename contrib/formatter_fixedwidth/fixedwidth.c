@@ -320,18 +320,23 @@ make_val_with_blanks(FunctionCallInfo fcinfo, char *value, int field_size, Strin
 	}
 
 	/*
-	 * Error out if the value is too large, and pad with spaces if it's too
-	 * small.
+	 * Encoding conversions can result in extra spaces at the end of the value, delete them.
+	 * Don't worry about missing spaces, they will be filled in with othre spaces 
+	 * at the end of the value to ensure the fixed length eventually.
+	 * Please refer to https://github.com/greenplum-db/gpdb/issues/15038
 	 */
 	sz = buf->len;
 	if (sz > field_size)
 		truncateEolSpaces(buf);
+
+	/* Error out if the value is too large. */
 	sz = buf->len;
 	if (sz > field_size)
 		ereport(ERROR,
 				(errcode(ERRCODE_STRING_DATA_LENGTH_MISMATCH),
 				 errmsg("The size of the value cannot be bigger than the field size value: %s, size: %d, field_size %d",
 						value, sz, field_size)));
+	/* Pad with spaces if the value is too small. */
 	appendStringInfoSpaces(buf, field_size - sz);
 
 	return buf->data;
