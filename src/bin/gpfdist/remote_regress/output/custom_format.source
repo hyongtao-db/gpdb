@@ -10514,7 +10514,7 @@ DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_write;
 NOTICE:  foreign table "tbl_ext_fixedwidth_write" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth_read (
     s1 char(10), s2 text)
-LOCATION ('gpfdist://localhost.localdomain:7575/fixedwidth_encoding_GBK.tbl')
+LOCATION ('gpfdist://@hostname@n:7575/fixedwidth_encoding_GBK.tbl')
 FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1=10, s2=10) ENCODING 'GBK';
 SELECT * FROM tbl_ext_fixedwidth_read ORDER BY s1;
        s1        |     s2     
@@ -10533,7 +10533,7 @@ SELECT * FROM tbl_ext_fixedwidth_read ORDER BY s1;
 
 CREATE WRITABLE EXTERNAL TABLE tbl_ext_fixedwidth_write (
     s1 char(10), s2 text)
-LOCATION ('gpfdist://localhost.localdomain:7575/fixedwidth_encoding_GBK_output.tbl')
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_encoding_GBK_output.tbl')
 FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10', s2='10') ENCODING 'GBK';
 INSERT INTO tbl_ext_fixedwidth_write (s1, s2) SELECT * FROM tbl_ext_fixedwidth_read;
 INSERT INTO tbl_ext_fixedwidth_write (s1, s2) values ('一二三四五','六七八九十');
