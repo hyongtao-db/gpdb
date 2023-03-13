@@ -263,6 +263,27 @@ make_null_val_with_blanks(char *value, int field_size)
 	return ret;
 }
 
+/* remove end of line space from end of a buffer */
+void truncateEolSpaces(StringInfo buf)
+{
+	int one_back = buf->len - 1;
+
+	if(buf->len < 1)
+		return;
+
+	while(one_back)
+	{
+		if(buf->data[one_back] != ' ')
+			return;
+		else
+		{
+			buf->data[one_back] = '\0';
+			buf->len--;
+			one_back--;
+		}
+	}
+}
+
 /*
  * make_val_with_blanks
  *
@@ -302,6 +323,9 @@ make_val_with_blanks(FunctionCallInfo fcinfo, char *value, int field_size, Strin
 	 * Error out if the value is too large, and pad with spaces if it's too
 	 * small.
 	 */
+	sz = buf->len;
+	if (sz > field_size)
+		truncateEolSpaces(buf);
 	sz = buf->len;
 	if (sz > field_size)
 		ereport(ERROR,
