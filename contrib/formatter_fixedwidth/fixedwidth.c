@@ -268,12 +268,12 @@ void truncateEolSpaces(StringInfo buf)
 {
 	int one_back = buf->len - 1;
 
-	if(buf->len < 1)
+	if (buf->len < 1)
 		return;
 
-	while(one_back)
+	while (one_back)
 	{
-		if(buf->data[one_back] != ' ')
+		if (buf->data[one_back] != ' ')
 			return;
 		else
 		{
@@ -321,7 +321,7 @@ make_val_with_blanks(FunctionCallInfo fcinfo, char *value, int field_size, Strin
 
 	/*
 	 * Encoding conversions can result in extra spaces at the end of the value, delete them.
-	 * Don't worry about missing spaces, they will be filled in with othre spaces 
+	 * Don't worry about missing spaces, they will be filled in with other spaces 
 	 * at the end of the value to ensure the fixed length eventually.
 	 * Please refer to https://github.com/greenplum-db/gpdb/issues/15038
 	 */
