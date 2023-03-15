@@ -45,7 +45,7 @@ FORMAT 'text' (delimiter '|');
 -- 17. import data into table with string and numeric fields - data OK - no line_delimiter in input data file
 -- 18. import data into table with string and numeric fields - data OK - line delimiter containing several chars
 -- 19. MPP-14467 import data from file - field names with spaces
--- 20. issue-15038 fixedwidth custom with specail encoding, please refer to https://github.com/greenplum-db/gpdb/issues/15038
+-- 20. issue-15038 fixedwidth custom with char(n), please refer to https://github.com/greenplum-db/gpdb/issues/15038
 -- 1.  import data into table with string and numeric fields - data OK 
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 NOTICE:  foreign table "tbl_ext_fixedwidth" does not exist, skipping
@@ -10506,7 +10506,7 @@ SELECT * FROM clean_out_file;
 ---
 (0 rows)
 
--- 20. issue-15038 fixedwidth custom with specail encoding, please refer to https://github.com/greenplum-db/gpdb/issues/15038
+-- 20. issue-15038 fixedwidth custom with char(n), please refer to https://github.com/greenplum-db/gpdb/issues/15038
 -- GBK encoding test file
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_read;
 NOTICE:  foreign table "tbl_ext_fixedwidth_read" does not exist, skipping
