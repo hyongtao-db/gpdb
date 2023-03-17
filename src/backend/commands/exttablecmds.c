@@ -471,6 +471,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 		}
 		else
 		{
+			/* comma is a reserved character of gpdb location uri. */
 			appendStringInfoChar(&buf, ',');
 		}
 
