@@ -1504,6 +1504,9 @@ cdb_pull_up_eclass(PlannerInfo *root,
 	Assert(!newvarlist ||
 		   list_length(newvarlist) == list_length(targetlist));
 
+	if (eclass->ec_has_volatile && eclass->ec_sortref != 0)
+		return NULL;
+
 	/* Find an expr that we can rewrite to use the projected columns. */
 	sub_distkeyexpr = cdbpullup_findEclassInTargetList(eclass, targetlist, InvalidOid);
 
