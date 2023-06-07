@@ -2793,6 +2793,7 @@ _equalIndexElem(const IndexElem *a, const IndexElem *b)
 static bool
 _equalColumnDef(const ColumnDef *a, const ColumnDef *b)
 {
+	elog(INFO, "we meet function _equalColumnDef =================================");
 	COMPARE_STRING_FIELD(colname);
 	COMPARE_NODE_FIELD(typeName);
 	COMPARE_SCALAR_FIELD(inhcount);
