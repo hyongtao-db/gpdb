@@ -2758,8 +2758,6 @@ BeginCopyToForeignTable(Relation forrel, List *options)
 static uint64
 DoCopyTo(CopyState cstate)
 {
-	elog(INFO, "we meet function DoCopyTo =================================");
-
 	bool		pipe = (cstate->filename == NULL);
 	bool		fe_copy = (pipe && whereToSendOutput == DestRemote);
 	uint64		processed;
