@@ -299,9 +299,7 @@ static bool supported_by_fdw(Oid target) {
 	for (int i = 0; i < sizeof(supported_partial_agg) / sizeof(Oid); ++i )
 	{
 		if (target == supported_partial_agg[i])
-		{
 			return true;
-		}
 	}
 	return false;
 }
@@ -333,20 +331,14 @@ partial_agg_ok(Aggref* agg, PgFdwRelationInfo *fpinfo)
 	aggtup = SearchSysCache1(AGGFNOID, ObjectIdGetDatum(agg->aggfnoid));
 	if (!HeapTupleIsValid(aggtup))
 		elog(ERROR, "cache lookup failed for aggregate %u", agg->aggfnoid);
-	aggform = (Form_pg_aggregate)GETSTRUCT(aggtup);
+	aggform = (Form_pg_aggregate) GETSTRUCT(aggtup);
 
 	if ((aggform->aggtranstype != INTERNALOID) && (aggform->aggfinalfn == InvalidOid)) 
-	{
 		partial_agg_ok = true;
-	}
 	else if (supported_by_fdw(aggform->aggfnoid))
-	{
 		partial_agg_ok = true;
-	}
 	else
-	{
 		partial_agg_ok = false;
-	}
 
 	ReleaseSysCache(aggtup);
 	return partial_agg_ok;
@@ -3129,7 +3121,8 @@ deparsePartialAggFunctionParamFilter(Aggref *node, deparse_expr_cxt *context,
 {
 	StringInfo buf = context->buf;
 
-	switch (node->aggfnoid) {
+	switch (node->aggfnoid) 
+	{
 		case 2100:
 			/* int8 AVG */
 			/* Fall through */	
@@ -3161,6 +3154,7 @@ deparsePartialAggFunctionParamFilter(Aggref *node, deparse_expr_cxt *context,
 			break;
 	}
 }
+
 /* Deparse an Partial Aggref node. */
 static void 
 deparsePartialAggref(Aggref *node, deparse_expr_cxt *context)

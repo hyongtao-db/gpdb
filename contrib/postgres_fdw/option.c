@@ -68,7 +68,7 @@ postgres_fdw_validator(PG_FUNCTION_ARGS)
 	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
 	Oid			catalog = PG_GETARG_OID(1);
 	ListCell   *cell;
-	List		*host_list = NIL, *port_list = NIL;
+	List		*host_list, *port_list = NIL;
 
 	/* Build our options lists if we didn't yet. */
 	InitPgFdwOptions();
@@ -163,7 +163,7 @@ postgres_fdw_validator(PG_FUNCTION_ARGS)
 		}
 	}
 
-	if(list_length(host_list) != list_length(port_list))
+	if (list_length(host_list) != list_length(port_list))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("the number of multi_hosts and multi_ports is not same.")));

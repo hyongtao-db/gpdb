@@ -647,7 +647,7 @@ postgresGetForeignRelSize(PlannerInfo *root,
 	fpinfo->attrs_used = NULL;
 	pull_varattnos((Node *) baserel->reltarget->exprs, baserel->relid,
 				   &fpinfo->attrs_used);
-	foreach(lc, fpinfo->local_conds)
+	foreach (lc, fpinfo->local_conds)
 	{
 		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
 
@@ -785,7 +785,7 @@ get_useful_ecs_for_relation(PlannerInfo *root, RelOptInfo *rel)
 	 */
 	if (rel->has_eclass_joins)
 	{
-		foreach(lc, root->eq_classes)
+		foreach (lc, root->eq_classes)
 		{
 			EquivalenceClass *cur_ec = (EquivalenceClass *) lfirst(lc);
 
@@ -812,7 +812,7 @@ get_useful_ecs_for_relation(PlannerInfo *root, RelOptInfo *rel)
 		relids = rel->relids;
 
 	/* Check each join clause in turn. */
-	foreach(lc, rel->joininfo)
+	foreach (lc, rel->joininfo)
 	{
 		RestrictInfo *restrictinfo = (RestrictInfo *) lfirst(lc);
 
@@ -886,7 +886,7 @@ get_useful_pathkeys_for_relation(PlannerInfo *root, RelOptInfo *rel)
 	{
 		bool		query_pathkeys_ok = true;
 
-		foreach(lc, root->query_pathkeys)
+		foreach (lc, root->query_pathkeys)
 		{
 			PathKey    *pathkey = (PathKey *) lfirst(lc);
 
@@ -941,7 +941,7 @@ get_useful_pathkeys_for_relation(PlannerInfo *root, RelOptInfo *rel)
 	 * need to be a bit cautious here.  It would sure be nice to have a local
 	 * cache of information about remote index definitions...
 	 */
-	foreach(lc, useful_eclass_list)
+	foreach (lc, useful_eclass_list)
 	{
 		EquivalenceClass *cur_ec = lfirst(lc);
 		PathKey    *pathkey;
@@ -1032,7 +1032,7 @@ postgresGetForeignPaths(PlannerInfo *root,
 	 * insists that we handle all movable clauses).
 	 */
 	ppi_list = NIL;
-	foreach(lc, baserel->joininfo)
+	foreach (lc, baserel->joininfo)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 		Relids		required_outer;
@@ -1108,7 +1108,7 @@ postgresGetForeignPaths(PlannerInfo *root,
 			}
 
 			/* Scan the extracted join clauses */
-			foreach(lc, clauses)
+			foreach (lc, clauses)
 			{
 				RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 				Relids		required_outer;
@@ -1146,7 +1146,7 @@ postgresGetForeignPaths(PlannerInfo *root,
 	/*
 	 * Now build a path for each useful outer relation.
 	 */
-	foreach(lc, ppi_list)
+	foreach (lc, ppi_list)
 	{
 		ParamPathInfo *param_info = (ParamPathInfo *) lfirst(lc);
 		double		rows;
@@ -1244,7 +1244,7 @@ postgresGetForeignPlan(PlannerInfo *root,
 		 * except for the additional decision about remote versus local
 		 * execution.
 		 */
-		foreach(lc, scan_clauses)
+		foreach (lc, scan_clauses)
 		{
 			RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
 
@@ -1326,7 +1326,7 @@ postgresGetForeignPlan(PlannerInfo *root,
 			 * which case we'll fail to remove them; it's not worth working
 			 * harder than this.
 			 */
-			foreach(lc, local_exprs)
+			foreach (lc, local_exprs)
 			{
 				Node	   *qual = lfirst(lc);
 
@@ -1414,7 +1414,7 @@ static int get_hostinfo_index(EState *estate)
 			break;
 	}
 
-	if(process_no < 0)
+	if (process_no < 0)
 		ereport(ERROR, (errmsg("No valid slice number")));
 
 	return process_no;
@@ -1429,41 +1429,41 @@ static void rewrite_server_options(ForeignServer *server, int index)
 	DefElem    *host = NULL, *port = NULL;
 	char *multi_hosts = NULL, *multi_ports = NULL;
 
-	foreach(lc, server->options)
+	foreach (lc, server->options)
 	{
 		DefElem    *d = (DefElem *) lfirst(lc);
 
 		if (strcmp(d->defname, "host") == 0)
 			host = d;
-		else if(strcmp(d->defname, "port") == 0)
+		else if (strcmp(d->defname, "port") == 0)
 			port = d;
-		else if(strcmp(d->defname, "multi_hosts") == 0)
+		else if (strcmp(d->defname, "multi_hosts") == 0)
 			multi_hosts = pstrdup(defGetString(d));
-		else if(strcmp(d->defname, "multi_ports") == 0)
+		else if (strcmp(d->defname, "multi_ports") == 0)
 			multi_ports = pstrdup(defGetString(d));
 	}
 
 	/* Using origin host and port in server option */
-	if(!multi_hosts || !multi_ports)
+	if (!multi_hosts || !multi_ports)
 		return;
 
-	List *host_list = NIL, *port_list = NIL;
-	char *one_host = NULL, *one_port = NULL;
+	List *host_list, *port_list = NIL;
+	char *one_host, *one_port = NULL;
 	while ((one_host = strsep(&multi_hosts, " ")) != NULL)
 		host_list = lappend(host_list, makeString(one_host));
 	while ((one_port = strsep(&multi_ports, " ")) != NULL)
 		port_list = lappend(port_list, makeString(one_port));
 
 	int num_host = list_length(host_list), num_port = list_length(port_list);
-	if(server->num_segments != num_host || num_host != num_port || index >= num_host)
+	if (server->num_segments != num_host || num_host != num_port || index >= num_host)
 		ereport(ERROR, (errmsg("server option num_segments, multi_hosts and multi_ports don't match.")));
 
-	if(host)
+	if (host)
 		host->arg = (Node *) list_nth(host_list, index);
 	else
 		server->options = lappend(server->options, makeDefElem(pstrdup("host"), (Node *)list_nth(host_list, index), -1));
 
-	if(port)
+	if (port)
 		port->arg = (Node *) list_nth(port_list, index);
 	else
 		server->options = lappend(server->options, makeDefElem(pstrdup("port"), (Node *)list_nth(port_list, index), -1));
@@ -1521,9 +1521,9 @@ postgresBeginForeignScan(ForeignScanState *node, int eflags)
 	 * Get connection to the foreign server.  Connection manager will
 	 * establish new connection if necessary.
 	 */
-	if(table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+	if (table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
 	{
-		if(Gp_role == GP_ROLE_EXECUTE)
+		if (Gp_role == GP_ROLE_EXECUTE)
 		{
 			int index = get_hostinfo_index(estate);
 			rewrite_server_options(server, index);
@@ -2182,14 +2182,14 @@ postgresIsForeignRelUpdatable(Relation rel)
 	table = GetForeignTable(RelationGetRelid(rel));
 	server = GetForeignServer(table->serverid);
 
-	foreach(lc, server->options)
+	foreach (lc, server->options)
 	{
 		DefElem    *def = (DefElem *) lfirst(lc);
 
 		if (strcmp(def->defname, "updatable") == 0)
 			updatable = defGetBoolean(def);
 	}
-	foreach(lc, table->options)
+	foreach (lc, table->options)
 	{
 		DefElem    *def = (DefElem *) lfirst(lc);
 
@@ -2210,16 +2210,16 @@ postgresIsForeignRelUpdatable(Relation rel)
 	 */
 	bool isGreenplum = false;
 	UserMapping *user = GetUserMapping(rel->rd_rel->relowner, table->serverid);
-	if(table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+	if (table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
 	{
 		int index;
-		for(index = 0; index < server->num_segments; ++index)
+		for (index = 0; index < server->num_segments; ++index)
 		{
 			rewrite_server_options(server, index);
-			if(greenplumCheckIsGreenplum(server, user))
+			if (greenplumCheckIsGreenplum(server, user))
 				break;
 		}
-		if(index != server->num_segments)
+		if (index != server->num_segments)
 			isGreenplum = true;
 	}
 	else
@@ -2509,9 +2509,9 @@ postgresBeginDirectModify(ForeignScanState *node, int eflags)
 	 * Get connection to the foreign server.  Connection manager will
 	 * establish new connection if necessary.
 	 */
-	if(table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+	if (table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
 	{
-		if(Gp_role == GP_ROLE_EXECUTE)
+		if (Gp_role == GP_ROLE_EXECUTE)
 		{
 			int index = get_hostinfo_index(estate);
 			rewrite_server_options(server, index);
@@ -2822,14 +2822,14 @@ estimate_path_cost_size(PlannerInfo *root,
 		/* Get the remote estimate */
 		ForeignServer *server = GetForeignServer(fpinfo->user->serverid);
 
-		if(foreignrel->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+		if (foreignrel->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
 		{
 			double		tmp_rows = 0;
 			int			tmp_width = 0;
 			Cost		tmp_startup_cost = 0;
 			Cost		tmp_total_cost = 0;
 
-			for(int index = 0; index < server->num_segments; ++index)
+			for (int index = 0; index < server->num_segments; ++index)
 			{
 				rewrite_server_options(server, index);
 				conn = GetConnection(server, fpinfo->user, false);
@@ -3684,9 +3684,9 @@ create_foreign_modify(EState *estate,
 	user = GetUserMapping(userid, table->serverid);
 
 	/* Open connection; report that we'll create a prepared statement. */
-	if(table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+	if (table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
 	{
-		if(Gp_role == GP_ROLE_EXECUTE)
+		if (Gp_role == GP_ROLE_EXECUTE)
 		{
 			int index = get_hostinfo_index(estate);
 			rewrite_server_options(server, index);
@@ -3738,7 +3738,7 @@ create_foreign_modify(EState *estate,
 	if (operation == CMD_INSERT || operation == CMD_UPDATE)
 	{
 		/* Set up for remaining transmittable parameters */
-		foreach(lc, fmstate->target_attrs)
+		foreach (lc, fmstate->target_attrs)
 		{
 			int			attnum = lfirst_int(lc);
 			Form_pg_attribute attr = TupleDescAttr(tupdesc, attnum - 1);
@@ -3939,7 +3939,7 @@ convert_prep_stmt_params(PgFdwModifyState *fmstate,
 
 		nestlevel = set_transmission_modes();
 
-		foreach(lc, fmstate->target_attrs)
+		foreach (lc, fmstate->target_attrs)
 		{
 			int			attnum = lfirst_int(lc);
 			Form_pg_attribute attr = TupleDescAttr(tupdesc, attnum - 1);
@@ -4059,7 +4059,7 @@ build_remote_returning(Index rtindex, Relation rel, List *returningList)
 	 * If there's a whole-row reference to the target relation, then we'll
 	 * need all the columns of the relation.
 	 */
-	foreach(lc, vars)
+	foreach (lc, vars)
 	{
 		Var		   *var = (Var *) lfirst(lc);
 
@@ -4102,7 +4102,7 @@ build_remote_returning(Index rtindex, Relation rel, List *returningList)
 	}
 
 	/* Now add any remaining columns to tlist. */
-	foreach(lc, vars)
+	foreach (lc, vars)
 	{
 		Var		   *var = (Var *) lfirst(lc);
 
@@ -4151,7 +4151,7 @@ rebuild_fdw_scan_tlist(ForeignScan *fscan, List *tlist)
 	List	   *old_tlist = fscan->fdw_scan_tlist;
 	ListCell   *lc;
 
-	foreach(lc, old_tlist)
+	foreach (lc, old_tlist)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(lc);
 
@@ -4322,7 +4322,7 @@ init_returning_filter(PgFdwDirectModifyState *dmstate,
 
 	i = 1;
 	dmstate->hasSystemCols = false;
-	foreach(lc, fdw_scan_tlist)
+	foreach (lc, fdw_scan_tlist)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(lc);
 		Var		   *var = (Var *) tle->expr;
@@ -4483,7 +4483,7 @@ prepare_query_params(PlanState *node,
 	*param_flinfo = (FmgrInfo *) palloc0(sizeof(FmgrInfo) * numParams);
 
 	i = 0;
-	foreach(lc, fdw_exprs)
+	foreach (lc, fdw_exprs)
 	{
 		Node	   *param_expr = (Node *) lfirst(lc);
 		Oid			typefnoid;
@@ -4524,7 +4524,7 @@ process_query_params(ExprContext *econtext,
 	nestlevel = set_transmission_modes();
 
 	i = 0;
-	foreach(lc, param_exprs)
+	foreach (lc, param_exprs)
 	{
 		ExprState  *expr_state = (ExprState *) lfirst(lc);
 		Datum		expr_value;
@@ -4580,7 +4580,7 @@ postgresAnalyzeForeignTable(Relation relation,
 	 */
 	table = GetForeignTable(RelationGetRelid(relation));
 
-	if(table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+	if (table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
 	{
 		postgresAnalyzeForeignTableForMultiServer(relation, func, totalpages);
 		return true;
@@ -4717,7 +4717,7 @@ postgresAcquireSampleRowsFunc(Relation relation, int elevel,
 
 			/* The fetch size is arbitrary, but shouldn't be enormous. */
 			fetch_size = 100;
-			foreach(lc, server->options)
+			foreach (lc, server->options)
 			{
 				DefElem    *def = (DefElem *) lfirst(lc);
 
@@ -4727,7 +4727,7 @@ postgresAcquireSampleRowsFunc(Relation relation, int elevel,
 					break;
 				}
 			}
-			foreach(lc, table->options)
+			foreach (lc, table->options)
 			{
 				DefElem    *def = (DefElem *) lfirst(lc);
 
@@ -4835,7 +4835,7 @@ postgresAnalyzeForeignTableForMultiServer(Relation relation,
 	deparseAnalyzeSizeSql(&sql, relation);
 
 	*totalpages = 0;
-	for(int index = 0; index < server->num_segments; ++index)
+	for (int index = 0; index < server->num_segments; ++index)
 	{
 		rewrite_server_options(server, index);
 		conn = GetConnection(server, user, false);
@@ -4915,7 +4915,7 @@ postgresAcquireSampleRowsFuncForMultiServer(Relation relation, int elevel,
 	server = GetForeignServer(table->serverid);
 	user = GetUserMapping(relation->rd_rel->relowner, table->serverid);
 
-	for(int index = 0; index < server->num_segments; ++index)
+	for (int index = 0; index < server->num_segments; ++index)
 	{
 		rewrite_server_options(server, index);
 		conn = GetConnection(server, user, false);
@@ -4957,7 +4957,7 @@ postgresAcquireSampleRowsFuncForMultiServer(Relation relation, int elevel,
 
 				/* The fetch size is arbitrary, but shouldn't be enormous. */
 				fetch_size = 100;
-				foreach(lc, server->options)
+				foreach (lc, server->options)
 				{
 					DefElem    *def = (DefElem *) lfirst(lc);
 
@@ -4967,7 +4967,7 @@ postgresAcquireSampleRowsFuncForMultiServer(Relation relation, int elevel,
 						break;
 					}
 				}
-				foreach(lc, table->options)
+				foreach (lc, table->options)
 				{
 					DefElem    *def = (DefElem *) lfirst(lc);
 
@@ -5121,7 +5121,7 @@ postgresImportForeignSchema(ImportForeignSchemaStmt *stmt, Oid serverOid)
 	ListCell   *lc;
 
 	/* Parse statement options */
-	foreach(lc, stmt->options)
+	foreach (lc, stmt->options)
 	{
 		DefElem    *def = (DefElem *) lfirst(lc);
 
@@ -5262,7 +5262,7 @@ postgresImportForeignSchema(ImportForeignSchemaStmt *stmt, Oid serverOid)
 			appendStringInfoString(&buf, "IN (");
 
 			/* Append list of table names within IN clause */
-			foreach(lc, stmt->table_list)
+			foreach (lc, stmt->table_list)
 			{
 				RangeVar   *rv = (RangeVar *) lfirst(lc);
 
@@ -5473,7 +5473,7 @@ foreign_join_ok(PlannerInfo *root, RelOptInfo *joinrel, JoinType jointype,
 	 * won't consult those lists again if we deem the join unshippable.
 	 */
 	joinclauses = NIL;
-	foreach(lc, extra->restrictlist)
+	foreach (lc, extra->restrictlist)
 	{
 		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
 		bool		is_remote_clause = is_foreign_expr(root, joinrel,
@@ -5505,7 +5505,7 @@ foreign_join_ok(PlannerInfo *root, RelOptInfo *joinrel, JoinType jointype,
 	 * needs to be evaluated *at the top* of this join tree is OK, because we
 	 * can do that locally after fetching the results from the remote side.
 	 */
-	foreach(lc, root->placeholder_list)
+	foreach (lc, root->placeholder_list)
 	{
 		PlaceHolderInfo *phinfo = lfirst(lc);
 		Relids		relids;
@@ -5680,7 +5680,7 @@ add_paths_with_pathkeys_for_rel(PlannerInfo *root, RelOptInfo *rel,
 	useful_pathkeys_list = get_useful_pathkeys_for_relation(root, rel);
 
 	/* Create one path for each set of pathkeys we found above. */
-	foreach(lc, useful_pathkeys_list)
+	foreach (lc, useful_pathkeys_list)
 	{
 		double		rows;
 		int			width;
@@ -5742,7 +5742,7 @@ apply_server_options(PgFdwRelationInfo *fpinfo)
 {
 	ListCell   *lc;
 
-	foreach(lc, fpinfo->server->options)
+	foreach (lc, fpinfo->server->options)
 	{
 		DefElem    *def = (DefElem *) lfirst(lc);
 
@@ -5770,7 +5770,7 @@ apply_table_options(PgFdwRelationInfo *fpinfo)
 {
 	ListCell   *lc;
 
-	foreach(lc, fpinfo->table->options)
+	foreach (lc, fpinfo->table->options)
 	{
 		DefElem    *def = (DefElem *) lfirst(lc);
 
@@ -6023,7 +6023,7 @@ foreign_grouping_ok(PlannerInfo *root, RelOptInfo *grouped_rel,
 	 * a node, as long as it's not at top level; then no match is possible.
 	 */
 	i = 0;
-	foreach(lc, grouping_target->exprs)
+	foreach (lc, grouping_target->exprs)
 	{
 		Expr	   *expr = (Expr *) lfirst(lc);
 		Index		sgref = get_pathtarget_sortgroupref(grouping_target, i);
@@ -6111,7 +6111,7 @@ foreign_grouping_ok(PlannerInfo *root, RelOptInfo *grouped_rel,
 				 * GROUP BY column would cause the foreign server to complain
 				 * that the shipped query is invalid.
 				 */
-				foreach(l, aggvars)
+				foreach (l, aggvars)
 				{
 					Expr	   *expr = (Expr *) lfirst(l);
 
@@ -6132,7 +6132,7 @@ foreign_grouping_ok(PlannerInfo *root, RelOptInfo *grouped_rel,
 	{
 		ListCell   *lc;
 
-		foreach(lc, (List *) havingQual)
+		foreach (lc, (List *) havingQual)
 		{
 			Expr	   *expr = (Expr *) lfirst(lc);
 			RestrictInfo *rinfo;
@@ -6167,7 +6167,7 @@ foreign_grouping_ok(PlannerInfo *root, RelOptInfo *grouped_rel,
 		List	   *aggvars = NIL;
 		ListCell   *lc;
 
-		foreach(lc, fpinfo->local_conds)
+		foreach (lc, fpinfo->local_conds)
 		{
 			RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
 
@@ -6176,7 +6176,7 @@ foreign_grouping_ok(PlannerInfo *root, RelOptInfo *grouped_rel,
 												  PVC_INCLUDE_AGGREGATES));
 		}
 
-		foreach(lc, aggvars)
+		foreach (lc, aggvars)
 		{
 			Expr	   *expr = (Expr *) lfirst(lc);
 
@@ -6260,7 +6260,7 @@ postgresGetForeignUpperPaths(PlannerInfo *root, UpperRelationKind stage,
 	{
 		case UPPERREL_CDB_FIRST_STAGE_GROUP_AGG:
 			/* It's unsafe to push having statements with partial aggregates */
-			if(((GroupPathExtraData *) extra)->havingQual) {
+			if (((GroupPathExtraData *) extra)->havingQual) {
 				return;
 			}
 			/* Fall through */
@@ -6444,7 +6444,7 @@ add_foreign_ordered_paths(PlannerInfo *root, RelOptInfo *input_rel,
 	 */
 
 	/* Assess if it is safe to push down the final sort */
-	foreach(lc, root->sort_pathkeys)
+	foreach (lc, root->sort_pathkeys)
 	{
 		PathKey    *pathkey = (PathKey *) lfirst(lc);
 		EquivalenceClass *pathkey_ec = pathkey->pk_eclass;
@@ -6586,7 +6586,7 @@ add_foreign_final_paths(PlannerInfo *root, RelOptInfo *input_rel,
 				(ifpinfo->outerrel->reloptkind == RELOPT_BASEREL ||
 				 ifpinfo->outerrel->reloptkind == RELOPT_JOINREL)));
 
-		foreach(lc, input_rel->pathlist)
+		foreach (lc, input_rel->pathlist)
 		{
 			Path	   *path = (Path *) lfirst(lc);
 
@@ -6748,16 +6748,16 @@ static void get_retrieved_partial_aggfnoids(ForeignScanState *fsstate,
 	ListCell *lc1 = NULL, *lc2 = NULL;
 	if (!fsstate)
 	{
-		foreach(lc1, retrieved_attrs)
+		foreach (lc1, retrieved_attrs)
 			*retrieved_aggfnoids = lappend_oid(*retrieved_aggfnoids, InvalidOid);
 	}
 	else
 	{
 		/* ForeignScan case */
 		ForeignScan *fsplan = (ForeignScan*)fsstate->ss.ps.plan;
-		if(!fsplan->fdw_scan_tlist)
+		if (!fsplan->fdw_scan_tlist)
 		{
-			foreach(lc1, retrieved_attrs)
+			foreach (lc1, retrieved_attrs)
 				*retrieved_aggfnoids = lappend_oid(*retrieved_aggfnoids, InvalidOid);
 		}
 		else
@@ -7075,7 +7075,7 @@ find_em_for_rel(PlannerInfo *root, EquivalenceClass *ec, RelOptInfo *rel)
 {
 	ListCell   *lc;
 
-	foreach(lc, ec->ec_members)
+	foreach (lc, ec->ec_members)
 	{
 		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
 
@@ -7112,7 +7112,7 @@ find_em_for_rel_target(PlannerInfo *root, EquivalenceClass *ec,
 	int			i;
 
 	i = 0;
-	foreach(lc1, target->exprs)
+	foreach (lc1, target->exprs)
 	{
 		Expr	   *expr = (Expr *) lfirst(lc1);
 		Index		sgref = get_pathtarget_sortgroupref(target, i);
@@ -7132,7 +7132,7 @@ find_em_for_rel_target(PlannerInfo *root, EquivalenceClass *ec,
 			expr = ((RelabelType *) expr)->arg;
 
 		/* Locate an EquivalenceClass member matching this expr, if any */
-		foreach(lc2, ec->ec_members)
+		foreach (lc2, ec->ec_members)
 		{
 			EquivalenceMember *em = (EquivalenceMember *) lfirst(lc2);
 			Expr	   *em_expr;
