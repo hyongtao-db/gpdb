@@ -533,6 +533,8 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	Bitmapset  *plan_param_set;
 	int         paramid;
 
+	SS_finalize_plan(subroot, plan);
+
 	/*
 	 * Initialize the SubPlan node.  Note plan_id, plan_name, and cost fields
 	 * are set further down.
