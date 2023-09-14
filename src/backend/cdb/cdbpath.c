@@ -976,8 +976,7 @@ cdbpath_match_preds_to_both_distkeys(PlannerInfo *root,
 	List	   *outer_distkey;
 	List	   *inner_distkey;
 
-	if (!mergeclause_list ||
-		CdbPathLocus_NumSegments(outer_locus) != CdbPathLocus_NumSegments(inner_locus) ||
+	if (CdbPathLocus_NumSegments(outer_locus) != CdbPathLocus_NumSegments(inner_locus) ||
 		outer_locus.distkey == NIL || inner_locus.distkey == NIL ||
 		list_length(outer_locus.distkey) != list_length(inner_locus.distkey))
 		return false;
