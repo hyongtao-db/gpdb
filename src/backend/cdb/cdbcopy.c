@@ -644,7 +644,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 			}
 
 			/* in SREH mode, check if this seg rejected (how many) rows */
-			if (res->numRejected > 0)
+			if (res->numRejected >= 0)
 			{
 				segment_rows_rejected = res->numRejected;
 				/* 
@@ -668,7 +668,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 			 * When COPY FROM, need to calculate the number of this
 			 * segment's completed rows
 			 */
-			if (res->numCompleted > 0)
+			if (res->numCompleted >= 0)
 			{
 				segment_rows_completed = res->numCompleted;
 				/* 
