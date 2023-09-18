@@ -643,7 +643,12 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 					PQfreemem(buffer);
 			}
 
-			/* in SREH mode, check if this seg rejected (how many) rows */
+			/* 
+			 * in SREH mode, check if this seg rejected (how many) rows
+			 * 
+			 * To ensure the correctness of COPY FROM an empty file,
+			 * we have to check res->numRejected == 0, please refer to issue-16250
+			 */
 			if (res->numRejected >= 0)
 			{
 				segment_rows_rejected = res->numRejected;
@@ -667,6 +672,9 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 			/*
 			 * When COPY FROM, need to calculate the number of this
 			 * segment's completed rows
+			 * 
+			 * To ensure the correctness of COPY FROM an empty file,
+			 * we have to check res->numCompleted == 0, please refer to issue-16250
 			 */
 			if (res->numCompleted >= 0)
 			{
