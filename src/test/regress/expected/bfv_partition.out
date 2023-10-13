@@ -2236,8 +2236,8 @@ LINE 1: ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE (`);
                                                            ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                                           pg_get_expr                                                            
--------------+-------+----------------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'), SUBPARTITION europe VALUES ('europe'))
+-------------+-------+----------------------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'), SUBPARTITION "europe" VALUES ('europe'))
 (1 row)
 
 set client_min_messages='warning';
@@ -2273,8 +2273,8 @@ ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia') );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
    relid    | level |                                        pg_get_expr                                        
-------------+-------+-------------------------------------------------------------------------------------------
- qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
+------------+-------+-----------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
 
 -- Invalid subpartition
@@ -2290,8 +2290,8 @@ LINE 2: ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END...
           ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
    relid    | level |                                        pg_get_expr                                        
-------------+-------+-------------------------------------------------------------------------------------------
- qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
+------------+-------+-----------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2304,8 +2304,8 @@ LINE 4: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
    relid    | level |                                        pg_get_expr                                        
-------------+-------+-------------------------------------------------------------------------------------------
- qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
+------------+-------+-----------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2318,8 +2318,8 @@ LINE 3: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
    relid    | level |                                        pg_get_expr                                        
-------------+-------+-------------------------------------------------------------------------------------------
- qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
+------------+-------+-----------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
 
 drop table qa147sales;
@@ -2348,16 +2348,16 @@ ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2008-02-01') EXCLUSIVE );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
    relid    | level |                                          pg_get_expr                                          
-------------+-------+-----------------------------------------------------------------------------------------------
- qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('02-01-2008'::date))
+------------+-------+-------------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('02-01-2008'::date))
 (1 row)
 
 ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2009-01-01') EXCLUSIVE EVERY (INTERVAL '1 month') );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
    relid    | level |                                                        pg_get_expr                                                        
-------------+-------+---------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
+------------+-------+-----------------------------------------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Invalid subpartition template
@@ -2368,8 +2368,8 @@ LINE 2: ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ...
           ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
    relid    | level |                                                        pg_get_expr                                                        
-------------+-------+---------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
+------------+-------+-----------------------------------------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2382,8 +2382,8 @@ LINE 3: SUBPARTITION usa1 VALUES('usa'),
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
    relid    | level |                                                        pg_get_expr                                                        
-------------+-------+---------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
+------------+-------+-----------------------------------------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2396,8 +2396,8 @@ LINE 4: SUBPARTITION usa1 VALUES('usa'));
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
    relid    | level |                                                        pg_get_expr                                                        
-------------+-------+---------------------------------------------------------------------------------------------------------------------------
- qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
+------------+-------+-----------------------------------------------------------------------------------------------------------------------------
+ qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 drop table qa147sales;
@@ -2433,8 +2433,8 @@ ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia') );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                        pg_get_expr                                        
--------------+-------+-------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
+-------------+-------+-----------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
 
 -- Invalid subpartition
@@ -2450,8 +2450,8 @@ LINE 2: ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END...
           ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                        pg_get_expr                                        
--------------+-------+-------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
+-------------+-------+-----------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2464,8 +2464,8 @@ LINE 4: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                        pg_get_expr                                        
--------------+-------+-------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
+-------------+-------+-----------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2478,8 +2478,8 @@ LINE 3: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                        pg_get_expr                                        
--------------+-------+-------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia'))
+-------------+-------+-----------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
 
 DROP SCHEMA qa147 cascade;
@@ -2515,16 +2515,16 @@ ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2008-02-01') EXCLUSIVE );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                          pg_get_expr                                          
--------------+-------+-----------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('02-01-2008'::date))
+-------------+-------+-------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('02-01-2008'::date))
 (1 row)
 
 ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2009-01-01') EXCLUSIVE EVERY (INTERVAL '1 month') );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                                        pg_get_expr                                                        
--------------+-------+---------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
+-------------+-------+-----------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Invalid subpartition template
@@ -2535,8 +2535,8 @@ LINE 2: ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ...
           ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                                        pg_get_expr                                                        
--------------+-------+---------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
+-------------+-------+-----------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2549,8 +2549,8 @@ LINE 3: SUBPARTITION usa1 VALUES('usa'),
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                                        pg_get_expr                                                        
--------------+-------+---------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
+-------------+-------+-----------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 -- Mix and Match RANGE/LIST . Expect to Error
@@ -2563,8 +2563,8 @@ LINE 4: SUBPARTITION usa1 VALUES('usa'));
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
     relid    | level |                                                        pg_get_expr                                                        
--------------+-------+---------------------------------------------------------------------------------------------------------------------------
- qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION usam1 START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
+-------------+-------+-----------------------------------------------------------------------------------------------------------------------------
+ qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
 
 drop schema qa147 cascade;
@@ -2698,8 +2698,8 @@ alter table partsupp_def set subpartition template( subpartition aaa start(400) 
 -- be using the subpartition template to definte the "new" partition or the existing one.
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'partsupp_def'::regclass;
     relid     | level |                                         pg_get_expr                                         
---------------+-------+---------------------------------------------------------------------------------------------
- partsupp_def |     1 | SUBPARTITION TEMPLATE(SUBPARTITION aaa START (400::integer) END (600::integer) Every (100))
+--------------+-------+-----------------------------------------------------------------------------------------------
+ partsupp_def |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "aaa" START (400::integer) END (600::integer) Every (100))
 (1 row)
 
 alter table partsup_def add partition f1 start(0) end (300) every(100);
@@ -2724,8 +2724,8 @@ alter table partsupp_def2 set subpartition template();
 alter table partsupp_def2 set subpartition template( subpartition aaa start(400) end (600) every(100) );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'partsupp_def2'::regclass;
      relid     | level |                                         pg_get_expr                                         
----------------+-------+---------------------------------------------------------------------------------------------
- partsupp_def2 |     1 | SUBPARTITION TEMPLATE(SUBPARTITION aaa START (400::integer) END (600::integer) Every (100))
+---------------+-------+-----------------------------------------------------------------------------------------------
+ partsupp_def2 |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "aaa" START (400::integer) END (600::integer) Every (100))
 (1 row)
 
 drop table partsupp_def;
