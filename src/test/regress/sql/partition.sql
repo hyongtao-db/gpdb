@@ -4167,4 +4167,9 @@ ALTER TABLE public.logs_issue_16558 SET SUBPARTITION TEMPLATE
     SUBPARTITION "1 2" VALUES ('1', '2', '3')
 );
 SELECT level, pg_get_expr(template, relid, true) FROM gp_partition_template WHERE relid = 'public.logs_issue_16558'::regclass ORDER BY 1 DESC;
+ALTER TABLE public.logs_issue_16558 SET SUBPARTITION TEMPLATE
+(
+    DEFAULT SUBPARTITION "1 2"
+);
+SELECT level, pg_get_expr(template, relid, true) FROM gp_partition_template WHERE relid = 'public.logs_issue_16558'::regclass ORDER BY 1 DESC;
 DROP TABLE public.logs_issue_16558;
