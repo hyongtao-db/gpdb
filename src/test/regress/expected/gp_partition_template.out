@@ -806,9 +806,9 @@ ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
     subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
     );
 SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'set_templ_test'::regclass;
- level |                                                                                          pg_get_expr                                                                                           
--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-     1 | SUBPARTITION TEMPLATE(SUBPARTITION "r1" START ('01-01-2001'::date) END ('01-01-2003'::date), SUBPARTITION r2 START ('01-01-2003'::date) END ('01-01-2005'::date) Every ('@ 1 year'::interval))
+ level |                                                                                           pg_get_expr                                                                                            
+-------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(SUBPARTITION "r1" START ('01-01-2001'::date) END ('01-01-2003'::date), SUBPARTITION "r2" START ('01-01-2003'::date) END ('01-01-2005'::date) Every ('@ 1 year'::interval))
 (1 row)
 
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('set_templ_test') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
