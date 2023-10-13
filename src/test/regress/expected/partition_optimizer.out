@@ -2435,7 +2435,7 @@ select relid::regclass, level from gp_partition_template where relid = 'rank_set
 alter table rank_settemp set subpartition template (default subpartition def2);
 -- def2 is there
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
-    relid     | level |                   pg_get_expr                    
+    relid     | level |                    pg_get_expr                     
 --------------+-------+----------------------------------------------------
  rank_settemp |     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION "def2")
 (1 row)
@@ -2443,7 +2443,7 @@ select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_te
 alter table rank_settemp set subpartition template (default subpartition def2);
 -- Should still be there
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
-    relid     | level |                   pg_get_expr                    
+    relid     | level |                    pg_get_expr                     
 --------------+-------+----------------------------------------------------
  rank_settemp |     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION "def2")
 (1 row)
@@ -3588,7 +3588,7 @@ alter table mpp5992
 set subpartition template (subpartition l1 values (1,2,3), 
 subpartition l2 values (4,5,6), subpartition l3 values (7,8,9,10));
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'mpp5992'::regclass;
-  relid  | level |                                                           pg_get_expr                                                           
+  relid  | level |                                                              pg_get_expr                                                              
 ---------+-------+---------------------------------------------------------------------------------------------------------------------------------------
  mpp5992 |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "l1" VALUES (1, 2, 3), SUBPARTITION "l2" VALUES (4, 5, 6), SUBPARTITION "l3" VALUES (7, 8, 9, 10))
  mpp5992 |     3 | SUBPARTITION TEMPLATE(SUBPARTITION "lll1" VALUES ('M'), SUBPARTITION "lll2" VALUES ('F'))
@@ -3842,7 +3842,7 @@ select relname, relam, pg_get_expr(relpartbound, oid) from pg_class where relnam
 (112 rows)
 
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'mpp5992'::regclass;
-  relid  | level |                                                           pg_get_expr                                                           
+  relid  | level |                                                              pg_get_expr                                                              
 ---------+-------+---------------------------------------------------------------------------------------------------------------------------------------
  mpp5992 |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "l1" VALUES (1, 2, 3), SUBPARTITION "l2" VALUES (4, 5, 6), SUBPARTITION "l3" VALUES (7, 8, 9, 10))
  mpp5992 |     3 | SUBPARTITION TEMPLATE(SUBPARTITION "lll1" VALUES ('M'), SUBPARTITION "lll2" VALUES ('F'))

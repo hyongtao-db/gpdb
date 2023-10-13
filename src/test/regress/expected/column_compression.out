@@ -768,7 +768,7 @@ execute ccddlcheck;
 (20 rows)
 
 SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
- level |                                                                                                          pg_get_expr                                                                                                           
+ level |                                                                                                           pg_get_expr                                                                                                            
 -------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1 | SUBPARTITION TEMPLATE(SUBPARTITION "sp1" VALUES (1, 2, 3, 4, 5), COLUMN i ENCODING (compresstype=zlib), COLUMN j ENCODING (compresstype=rle_type), COLUMN k ENCODING (compresstype=zlib), COLUMN l ENCODING (compresstype=zlib))
 (1 row)
@@ -1236,7 +1236,7 @@ execute ccddlcheck;
 (6 rows)
 
 SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
- level |                                                                          pg_get_expr                                                                           
+ level |                                                                           pg_get_expr                                                                            
 -------+------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1 | SUBPARTITION TEMPLATE(SUBPARTITION "sp1" START (1::integer) END (20::integer), COLUMN i ENCODING (compresstype=zlib), COLUMN j ENCODING (compresstype=rle_type))
 (1 row)
@@ -1709,7 +1709,7 @@ execute ccddlcheck;
 (33 rows)
 
 SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
- level |                                           pg_get_expr                                           
+ level |                                            pg_get_expr                                            
 -------+---------------------------------------------------------------------------------------------------
      1 | SUBPARTITION TEMPLATE(SUBPARTITION "sp1" VALUES (1), DEFAULT COLUMN ENCODING (compresstype=zlib))
 (1 row)

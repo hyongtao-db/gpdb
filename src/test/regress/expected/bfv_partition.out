@@ -2235,7 +2235,7 @@ ERROR:  syntax error at or near "`"
 LINE 1: ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE (`);
                                                            ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                           pg_get_expr                                                            
+    relid    | level |                                                              pg_get_expr                                                               
 -------------+-------+----------------------------------------------------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'), SUBPARTITION "europe" VALUES ('europe'))
 (1 row)
@@ -2272,7 +2272,7 @@ select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_te
 ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia') );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                        pg_get_expr                                        
+   relid    | level |                                          pg_get_expr                                          
 ------------+-------+-----------------------------------------------------------------------------------------------
  qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
@@ -2289,7 +2289,7 @@ ERROR:  invalid boundary specification for LIST partition
 LINE 2: ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END...
           ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                        pg_get_expr                                        
+   relid    | level |                                          pg_get_expr                                          
 ------------+-------+-----------------------------------------------------------------------------------------------
  qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
@@ -2303,7 +2303,7 @@ ERROR:  invalid boundary specification for LIST partition
 LINE 4: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                        pg_get_expr                                        
+   relid    | level |                                          pg_get_expr                                          
 ------------+-------+-----------------------------------------------------------------------------------------------
  qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
@@ -2317,7 +2317,7 @@ ERROR:  invalid boundary specification for LIST partition
 LINE 3: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                        pg_get_expr                                        
+   relid    | level |                                          pg_get_expr                                          
 ------------+-------+-----------------------------------------------------------------------------------------------
  qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
@@ -2347,7 +2347,7 @@ select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_te
 ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2008-02-01') EXCLUSIVE );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                          pg_get_expr                                          
+   relid    | level |                                           pg_get_expr                                           
 ------------+-------+-------------------------------------------------------------------------------------------------
  qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('02-01-2008'::date))
 (1 row)
@@ -2355,7 +2355,7 @@ select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_te
 ALTER TABLE qa147sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2009-01-01') EXCLUSIVE EVERY (INTERVAL '1 month') );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                        pg_get_expr                                                        
+   relid    | level |                                                         pg_get_expr                                                         
 ------------+-------+-----------------------------------------------------------------------------------------------------------------------------
  qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
@@ -2367,7 +2367,7 @@ ERROR:  invalid boundary specification for RANGE partition
 LINE 2: ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ...
           ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                        pg_get_expr                                                        
+   relid    | level |                                                         pg_get_expr                                                         
 ------------+-------+-----------------------------------------------------------------------------------------------------------------------------
  qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
@@ -2381,7 +2381,7 @@ ERROR:  invalid boundary specification for RANGE partition
 LINE 3: SUBPARTITION usa1 VALUES('usa'),
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                        pg_get_expr                                                        
+   relid    | level |                                                         pg_get_expr                                                         
 ------------+-------+-----------------------------------------------------------------------------------------------------------------------------
  qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
@@ -2395,7 +2395,7 @@ ERROR:  invalid boundary specification for RANGE partition
 LINE 4: SUBPARTITION usa1 VALUES('usa'));
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147sales'::regclass;
-   relid    | level |                                                        pg_get_expr                                                        
+   relid    | level |                                                         pg_get_expr                                                         
 ------------+-------+-----------------------------------------------------------------------------------------------------------------------------
  qa147sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
@@ -2432,7 +2432,7 @@ select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_te
 ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ('asia') );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                        pg_get_expr                                        
+    relid    | level |                                          pg_get_expr                                          
 -------------+-------+-----------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
@@ -2449,7 +2449,7 @@ ERROR:  invalid boundary specification for LIST partition
 LINE 2: ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END...
           ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                        pg_get_expr                                        
+    relid    | level |                                          pg_get_expr                                          
 -------------+-------+-----------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
@@ -2463,7 +2463,7 @@ ERROR:  invalid boundary specification for LIST partition
 LINE 4: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                        pg_get_expr                                        
+    relid    | level |                                          pg_get_expr                                          
 -------------+-------+-----------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
@@ -2477,7 +2477,7 @@ ERROR:  invalid boundary specification for LIST partition
 LINE 3: SUBPARTITION usadate start (date '2008-01-01') INCLUSIVE END...
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                        pg_get_expr                                        
+    relid    | level |                                          pg_get_expr                                          
 -------------+-------+-----------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usa" VALUES ('usa'), SUBPARTITION "asia" VALUES ('asia'))
 (1 row)
@@ -2514,7 +2514,7 @@ select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_te
 ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2008-02-01') EXCLUSIVE );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                          pg_get_expr                                          
+    relid    | level |                                           pg_get_expr                                           
 -------------+-------+-------------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('02-01-2008'::date))
 (1 row)
@@ -2522,7 +2522,7 @@ select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_te
 ALTER TABLE qa147.sales SET SUBPARTITION TEMPLATE
 ( SUBPARTITION usam1 start (date '2008-01-01') INCLUSIVE END (date '2009-01-01') EXCLUSIVE EVERY (INTERVAL '1 month') );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                        pg_get_expr                                                        
+    relid    | level |                                                         pg_get_expr                                                         
 -------------+-------+-----------------------------------------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
@@ -2534,7 +2534,7 @@ ERROR:  invalid boundary specification for RANGE partition
 LINE 2: ( SUBPARTITION usa VALUES ('usa'), SUBPARTITION asia VALUES ...
           ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                        pg_get_expr                                                        
+    relid    | level |                                                         pg_get_expr                                                         
 -------------+-------+-----------------------------------------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
@@ -2548,7 +2548,7 @@ ERROR:  invalid boundary specification for RANGE partition
 LINE 3: SUBPARTITION usa1 VALUES('usa'),
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                        pg_get_expr                                                        
+    relid    | level |                                                         pg_get_expr                                                         
 -------------+-------+-----------------------------------------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
@@ -2562,7 +2562,7 @@ ERROR:  invalid boundary specification for RANGE partition
 LINE 4: SUBPARTITION usa1 VALUES('usa'));
         ^
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'qa147.sales'::regclass;
-    relid    | level |                                                        pg_get_expr                                                        
+    relid    | level |                                                         pg_get_expr                                                         
 -------------+-------+-----------------------------------------------------------------------------------------------------------------------------
  qa147.sales |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "usam1" START ('01-01-2008'::date) END ('01-01-2009'::date) Every ('@ 1 mon'::interval))
 (1 row)
@@ -2697,7 +2697,7 @@ alter table partsupp_def set subpartition template( subpartition aaa start(400) 
 -- Note 2: We do not support this function yet, but if we are able to split default partition with default subpartition, would we
 -- be using the subpartition template to definte the "new" partition or the existing one.
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'partsupp_def'::regclass;
-    relid     | level |                                         pg_get_expr                                         
+    relid     | level |                                          pg_get_expr                                          
 --------------+-------+-----------------------------------------------------------------------------------------------
  partsupp_def |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "aaa" START (400::integer) END (600::integer) Every (100))
 (1 row)
@@ -2723,7 +2723,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 alter table partsupp_def2 set subpartition template();
 alter table partsupp_def2 set subpartition template( subpartition aaa start(400) end (600) every(100) );
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'partsupp_def2'::regclass;
-     relid     | level |                                         pg_get_expr                                         
+     relid     | level |                                          pg_get_expr                                          
 ---------------+-------+-----------------------------------------------------------------------------------------------
  partsupp_def2 |     1 | SUBPARTITION TEMPLATE(SUBPARTITION "aaa" START (400::integer) END (600::integer) Every (100))
 (1 row)
