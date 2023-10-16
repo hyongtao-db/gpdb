@@ -4144,7 +4144,7 @@ select d from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -
 
 drop table test_listPartition;
 
--- Test case witt missing " for special-char for subpartition template name
+-- Test case witt missing " for special-char in subpartition template name
 -- Please refer to https://github.com/greenplum-db/gpdb/issues/16558
 CREATE TABLE public.logs_issue_16558
 (
