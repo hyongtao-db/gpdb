@@ -6,7 +6,7 @@
 --
 -- brin_metapage_info()
 --
-DROP FUNCTION brin_metapage_info(IN page bytea, OUT magic text,
+DROP FUNCTION IF EXISTS brin_metapage_info(IN page bytea, OUT magic text,
                                  OUT version integer, OUT pagesperrange integer, OUT lastrevmappage bigint);
 CREATE FUNCTION brin_metapage_info(IN page bytea, OUT magic text,
                                    OUT version integer, OUT pagesperrange integer, OUT lastrevmappage bigint,
@@ -29,7 +29,7 @@ AS 'MODULE_PATHNAME', 'brin_revmap_chain'
 --
 -- add information about BRIN empty ranges
 --
-DROP FUNCTION brin_page_items(IN page bytea, IN index_oid regclass);
+DROP FUNCTION If EXISTS brin_page_items(IN page bytea, IN index_oid regclass);
 CREATE FUNCTION brin_page_items(IN page bytea, IN index_oid regclass,
                                 OUT itemoffset int,
                                 OUT blknum int8,
