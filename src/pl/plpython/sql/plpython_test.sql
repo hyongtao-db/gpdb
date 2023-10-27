@@ -50,3 +50,19 @@ plpy.error('error')
 $$ LANGUAGE plpythonu;
 
 SELECT elog_test_basic();
+
+SET client_encoding TO 'UTF8';
+SET client_min_messages = LOG;
+
+CREATE FUNCTION elog_test_string_truncation() RETURNS void
+AS $$
+plpy.log(("床前明月光疑是地上霜举头望明月低头思故乡\n"+
+"独坐幽篁里弹琴复长啸深林人不知明月来相照\n"+
+"千山鸟飞绝万径人踪灭孤舟蓑笠翁独钓寒江雪\n"+
+"白日依山尽黄河入海流欲穷千里目更上一层楼\n"+
+"好雨知时节当春乃发生随风潜入夜润物细无声\n")*1000)
+$$ LANGUAGE plpythonu;
+
+SELECT elog_test_string_truncation();
+
+SET client_min_messages = NOTICE;
