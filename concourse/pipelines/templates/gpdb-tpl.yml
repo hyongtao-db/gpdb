@@ -104,11 +104,11 @@ anchors:
         action: destroy
 
 - &ccp_gen_cluster_default_params
-  AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
-  AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
-  AWS_DEFAULT_REGION: ((aws-region))
+  AWS_ACCESS_KEY_ID: GOOG52JYL5DLJSMXFO7EY7UT
+  AWS_SECRET_ACCESS_KEY: DpSbsGB/IFrvIOqX2CCQlNmWY2ZmynE4GxMPRMbm
+  AWS_DEFAULT_REGION: US
   BUCKET_PATH: clusters-google/
-  BUCKET_NAME: ((tf-bucket-name))
+  BUCKET_NAME: gpcloud-s3-ci
   CLOUD_PROVIDER: google
   <<: *default_platform
 
@@ -132,11 +132,11 @@ anchors:
           GOOGLE_PROJECT_ID: ((google-project-id))
           GOOGLE_ZONE: ((google-zone))
           GOOGLE_SERVICE_ACCOUNT: ((google-service-account/[[ variables_type ]]))
-          AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
-          AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+          AWS_ACCESS_KEY_ID: GOOG52JYL5DLJSMXFO7EY7UT
+          AWS_SECRET_ACCESS_KEY: DpSbsGB/IFrvIOqX2CCQlNmWY2ZmynE4GxMPRMbm
           AWS_DEFAULT_REGION: ((tf-machine-region))
           BUCKET_PATH: clusters-google/
-          BUCKET_NAME: ((tf-bucket-name))
+          BUCKET_NAME: gpcloud-s3-ci
 
 - &set_failed_two_clusters_common
   platform: linux
@@ -152,18 +152,18 @@ anchors:
     GOOGLE_PROJECT_ID: ((google-project-id))
     GOOGLE_ZONE: ((google-zone))
     GOOGLE_SERVICE_ACCOUNT: ((google-service-account/[[ variables_type ]]))
-    AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
-    AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+    AWS_ACCESS_KEY_ID: GOOG52JYL5DLJSMXFO7EY7UT
+    AWS_SECRET_ACCESS_KEY: DpSbsGB/IFrvIOqX2CCQlNmWY2ZmynE4GxMPRMbm
     AWS_DEFAULT_REGION: ((tf-machine-region))
     BUCKET_PATH: clusters-google/
-    BUCKET_NAME: ((tf-bucket-name))
+    BUCKET_NAME: gpcloud-s3-ci
 
 - &terraform_cluster
   type: terraform
   source:
     env:
-      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
-      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+      AWS_ACCESS_KEY_ID: GOOG52JYL5DLJSMXFO7EY7UT
+      AWS_SECRET_ACCESS_KEY: DpSbsGB/IFrvIOqX2CCQlNmWY2ZmynE4GxMPRMbm
       GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
     vars:
       project_id: ((google-project-id))
