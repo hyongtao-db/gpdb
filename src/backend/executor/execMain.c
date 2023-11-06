@@ -5019,7 +5019,7 @@ FillSliceGangInfo(Slice *slice, int numsegments)
 			break;
 		case GANGTYPE_SINGLETON_READER:
 			slice->gangSize = 1;
-			slice->segments = list_make1_int(gp_session_id % numsegments);
+			slice->segments = list_make1_int(gp_session_id % getgpsegmentCount());
 			break;
 		default:
 			elog(ERROR, "unexpected gang type");
