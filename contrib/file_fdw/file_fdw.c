@@ -822,11 +822,29 @@ fileAnalyzeForeignTable(Relation relation,
 	 * Get size of the file.  (XXX if we fail here, would it be better to just
 	 * return false to skip analyzing the table?)
 	 */
-	if (stat(filename, &stat_buf) < 0)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not stat file \"%s\": %m",
-						filename)));
+
+	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		StringInfoData filepath;
+		initStringInfo(&filepath);
+		appendStringInfoString(&filepath, filename);
+		replaceStringInfoString(&filepath, "<SEG_DATA_DIR>", DataDir);
+
+		if (strstr(filename, "<SEGID>") == NULL)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					errmsg("<SEGID> is required for file name")));
+
+		char segid_buf[8];
+		snprintf(segid_buf, 8, "%d", GpIdentity.segindex);
+		replaceStringInfoString(&filepath, "<SEGID>", segid_buf);
+
+		if (stat(filepath.data, &stat_buf) < 0)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					errmsg("could not stat file \"%s\": %m",
+							filepath.data)));
+	}
 
 	/*
 	 * Convert size to pages.  Must return at least 1 so that we can tell
