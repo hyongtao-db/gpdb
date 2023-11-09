@@ -117,7 +117,7 @@ CREATE TABLE table_dist_in_3_segments (
 	f1 int,
 	f2 text,
 	f3 text
-) DISTRIBUTED BY (f1);
+) DISTRIBUTED REPLICATED;
 EXPLAIN (VERBOSE, COSTS FALSE) INSERT INTO table_dist_in_3_segments SELECT * FROM gp_ft1 LIMIT 5;
 INSERT INTO table_dist_in_3_segments SELECT * FROM gp_ft1 LIMIT 5;
 DROP TABLE table_dist_in_3_segments;
