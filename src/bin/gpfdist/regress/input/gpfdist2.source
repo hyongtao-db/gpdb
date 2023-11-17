@@ -1191,8 +1191,8 @@ LOCATION('gpfdist://@hostname@:7070/gpfdist2/gz_multi_chunk_2.tbl.gz') FORMAT 'c
 SELECT count(*) FROM gz_multi_chunk_2;
 
 -- test auto-quote about key words
-CREATE test_quote(id bigint, item text, price int);
-CREATE TEMP TABLE test_quote_tmp as (
+CREATE TABLE test_quote(id bigint, item text, price int);
+CREATE TABLE test_quote_tmp as (
         select id, 
         item, 
         price, 
@@ -1200,10 +1200,10 @@ CREATE TEMP TABLE test_quote_tmp as (
         current_timestamp as time 
         from test_quote order by id);
 INSERT INTO test_quote values(1,'xyz', 1);
-CREATE WRITABLE EXTERNAL TABLE test_quote_ext (LIKE test_tmp) 
+CREATE WRITABLE EXTERNAL TABLE test_quote_ext (LIKE test_quote_tmp) 
 LOCATION('gpfdist://@hostname@:7070/gpfdist2/test_quote.csv') 
 FORMAT 'CSV' (FORCE QUOTE id, item, price, segment, time);
-INSERT INTO public.test_quote_ext (
+INSERT INTO test_quote_ext (
         select id, 
         item, 
         price, 
