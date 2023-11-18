@@ -1307,7 +1307,7 @@ CREATE TABLE test_quote_input AS (
         from test_quote order by id);
 INSERT INTO test_quote values(1, 'xyz', 1);
 CREATE WRITABLE EXTERNAL TABLE test_quote_ext (LIKE test_quote_input) 
-LOCATION('gpfdist://d3551cfb-3aa4-4406-76ed-52f6067c1774:7070/gpfdist2/test_quote.csv') 
+LOCATION('gpfdist://@hostname@:7070/gpfdist2/test_quote.csv') 
 FORMAT 'CSV' (FORCE QUOTE id, item, price, segment, time);
 INSERT INTO test_quote_ext (
         select id, item, price, 
