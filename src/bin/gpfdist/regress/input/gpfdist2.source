@@ -1211,6 +1211,8 @@ CREATE READABLE EXTERNAL TABLE test_quote_readable (LIKE test_quote_input)
 LOCATION('gpfdist://@hostname@:7070/gpfdist2/test_quote.csv') 
 FORMAT 'CSV' (FORCE NOT NULL id, item, price, segment, time);
 SELECT count(*) FROM test_quote_readable;
+\d test_quote_writable
+\d test_quote_readable
 DROP TABLE test_quote;
 DROP TABLE test_quote_input;
 DROP EXTERNAL TABLE test_quote_writable;
