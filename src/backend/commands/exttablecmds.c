@@ -820,8 +820,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 			{
 				const char *col_name = strVal(lfirst(l));
 
-				appendStringInfo(&cfbuf, (is_first_col ? " %s" : ",%s"),
-								 quote_identifier(col_name));
+				appendStringInfo(&cfbuf, (is_first_col ? " %s" : ",%s"), col_name);
 				is_first_col = false;
 			}
 		}
@@ -840,8 +839,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 			{
 				const char *col_name = strVal(lfirst(l));
 
-				appendStringInfo(&cfbuf, (is_first_col ? " %s" : ",%s"),
-								 quote_identifier(col_name));
+				appendStringInfo(&cfbuf, (is_first_col ? " %s" : ",%s"), col_name);
 				is_first_col = false;
 			}
 		}
