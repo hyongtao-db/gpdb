@@ -1447,7 +1447,7 @@ AppendOnlyStorageWrite_Content(AppendOnlyStorageWrite *storageWrite,
 			 * Since ~_GetBuffer now takes in a specification of the header
 			 * kind, we need to set the header kind so general routines like
 			 * ~_CompressAppend will work correctly when writing the small
-			 * "fragments
+			 * fragments
 			 */
 			storageWrite->getBufferAoHeaderKind = AoHeaderKind_SmallContent;
 			AppendOnlyStorageWrite_CompressAppend(storageWrite,
