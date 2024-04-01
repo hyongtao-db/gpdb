@@ -149,7 +149,7 @@ typedef struct AppendOnlyStorageWrite
 	int32		compressionOverrunLen;
 
 	/* The maximum buffer plus compression overrun byte length */
-	int32		maxBufferWithCompressionOverrrunLen;
+	int32		maxBufferWithCompressionOverrunLen;
 
 	/*
 	 * When non-null, we are doing VerifyBlock and this is the buffer to

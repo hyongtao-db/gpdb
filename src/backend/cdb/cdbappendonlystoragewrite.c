@@ -130,14 +130,14 @@ AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 	 * Now that we have determined the compression overrun, we can initialize
 	 * BufferedAppend with the correct maxBufferLen + compressionOverrunLen.
 	 */
-	storageWrite->maxBufferWithCompressionOverrrunLen =
+	storageWrite->maxBufferWithCompressionOverrunLen =
 		storageWrite->maxBufferLen + storageWrite->compressionOverrunLen;
 	storageWrite->maxLargeWriteLen = 2 * storageWrite->maxBufferLen;
-	Assert(storageWrite->maxBufferWithCompressionOverrrunLen <= storageWrite->maxLargeWriteLen);
+	Assert(storageWrite->maxBufferWithCompressionOverrunLen <= storageWrite->maxLargeWriteLen);
 
 	memoryLen = BufferedAppendMemoryLen
 		(
-		 storageWrite->maxBufferWithCompressionOverrrunLen, /* maxBufferLen */
+		 storageWrite->maxBufferWithCompressionOverrunLen, /* maxBufferLen */
 		 storageWrite->maxLargeWriteLen);
 
 	memory = (uint8 *) palloc(memoryLen);
@@ -145,7 +145,7 @@ AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 	BufferedAppendInit(&storageWrite->bufferedAppend,
 					   memory,
 					   memoryLen,
-					   storageWrite->maxBufferWithCompressionOverrrunLen,
+					   storageWrite->maxBufferWithCompressionOverrunLen,
 					   storageWrite->maxLargeWriteLen,
 					   relationName);
 
@@ -154,7 +154,7 @@ AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 		   storageWrite->relationName,
 		   (storageWrite->storageAttributes.compress ? "true" : "false"),
 		   storageWrite->storageAttributes.compressLevel,
-		   storageWrite->maxBufferWithCompressionOverrrunLen,
+		   storageWrite->maxBufferWithCompressionOverrunLen,
 		   storageWrite->maxLargeWriteLen);
 
 	/*
@@ -1038,7 +1038,7 @@ AppendOnlyStorageWrite_CompressAppend(AppendOnlyStorageWrite *storageWrite,
 
 	dataBuffer = &header[storageWrite->currentCompleteHeaderLen];
 	dataBufferWithOverrrunLen =
-		storageWrite->maxBufferWithCompressionOverrrunLen
+		storageWrite->maxBufferWithCompressionOverrunLen
 		- storageWrite->currentCompleteHeaderLen;
 
 	/*
